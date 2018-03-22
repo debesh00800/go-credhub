@@ -29,30 +29,73 @@ func TestCredhubClient(t *testing.T) {
 			Expect(len(creds)).To(Equal(0))
 		}
 
-		getValueByName := func() {
-			creds, err := chClient.GetByName("/concourse/common/sample-value")
-			Expect(err).To(BeNil())
-			Expect(len(creds)).To(Equal(3))
+		valueByNameTests := func(latest bool, num int) func() {
+			if latest {
+				return func() {
+					cred, err := chClient.GetLatestByName("/concourse/common/sample-value")
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(cred.Value).To(BeEquivalentTo("sample2"))
+				}
+			} else if num <= 0 {
+				return func() {
+					creds, err := chClient.GetByName("/concourse/common/sample-value")
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(len(creds)).To(Equal(3))
+				}
+			} else {
+				return func() {
+					Expect(false).To(BeTrue(), "unimplemented")
+				}
+			}
 		}
 
-		getPasswordByName := func() {
-			creds, err := chClient.GetByName("/concourse/common/sample-password")
-			Expect(err).To(BeNil())
-			Expect(len(creds)).To(Equal(3))
-			Expect(creds[0].Value).To(BeEquivalentTo("sample1"))
+		passwordByNameTests := func(latest bool, num int) func() {
+			if latest {
+				return func() {
+					cred, err := chClient.GetLatestByName("/concourse/common/sample-password")
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(cred.Value).To(BeEquivalentTo("sample1"))
+				}
+			} else if num <= 0 {
+				return func() {
+					creds, err := chClient.GetByName("/concourse/common/sample-password")
+					Expect(err).To(BeNil())
+					Expect(len(creds)).To(Equal(3))
+					Expect(creds[2].Value).To(BeEquivalentTo("sample2"))
+				}
+			} else {
+				return func() {
+					Expect(false).To(BeTrue(), "unimplemented")
+				}
+			}
 		}
 
-		getJSONByName := func() {
-			creds, err := chClient.GetByName("/concourse/common/sample-json")
-			Expect(err).To(BeNil())
-			Expect(len(creds)).To(Equal(3))
+		jsonByNameTests := func(latest bool, num int) func() {
+			if latest {
+				return func() {
+					cred, err := chClient.GetLatestByName("/concourse/common/sample-json")
+					Expect(err).To(Not(HaveOccurred()))
 
-			intf := creds[2].Value
-			val, ok := intf.([]interface{})
-			Expect(ok).To(BeTrue())
+					rawVal := cred.Value
+					val, ok := rawVal.(map[string]interface{})
+					Expect(ok).To(BeTrue())
 
-			Expect(int(val[0].(float64))).To(Equal(1))
-			Expect(int(val[1].(float64))).To(Equal(2))
+					Expect(val["foo"]).To(BeEquivalentTo("bar"))
+				}
+			} else {
+				return func() {
+					creds, err := chClient.GetByName("/concourse/common/sample-json")
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(len(creds)).To(Equal(3))
+
+					intf := creds[2].Value
+					val, ok := intf.([]interface{})
+					Expect(ok).To(BeTrue())
+
+					Expect(int(val[0].(float64))).To(Equal(1))
+					Expect(int(val[1].(float64))).To(Equal(2))
+				}
+			}
 		}
 
 		getUserByName := func() {
@@ -134,14 +177,20 @@ func TestCredhubClient(t *testing.T) {
 			})
 
 			when("Testing Get By Name", func() {
-				it("should get a 'value' type credential", getValueByName)
-				it("should get a 'password' type credential", getPasswordByName)
-				it("should get a 'json' type credential", getJSONByName)
+				it("should get a 'value' type credential", valueByNameTests(false, -1))
+				it("should get a 'password' type credential", passwordByNameTests(false, -1))
+				it("should get a 'json' type credential", jsonByNameTests(false, -1))
 				it("should get a 'user' type credential", getUserByName)
 				it("should get a 'ssh' type credential", getSSHByName)
 				it("should get a 'rsa' type credential", getRSAByName)
 				it("should get a 'certificate' type credential", getCertificateByName)
 				it("should not get a credential that doesn't exist", getNonexistentName)
+			})
+
+			when("Testing Get Latest By Name", func() {
+				it("should get a 'value' type credential", valueByNameTests(true, -1))
+				it("should get a 'password' type credential", passwordByNameTests(true, -1))
+				it("should get a 'json' type credential", jsonByNameTests(true, -1))
 			})
 		})
 	}, spec.Report(report.Terminal{}))

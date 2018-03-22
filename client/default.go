@@ -50,6 +50,19 @@ func (c *client) FindByPath(path string) ([]Credential, error) {
 }
 
 func (c *client) GetByName(name string) ([]Credential, error) {
+	return c.getByName(name, false, -1)
+}
+
+func (c *client) GetLatestByName(name string) (Credential, error) {
+	creds, err := c.getByName(name, true, -1)
+	if err != nil {
+		return Credential{}, err
+	}
+
+	return creds[0], nil
+}
+
+func (c *client) getByName(name string, latest bool, numVersions int) ([]Credential, error) {
 	var retBody struct {
 		Data []Credential `json:"data"`
 	}
@@ -77,10 +90,6 @@ func (c *client) GetByName(name string) ([]Credential, error) {
 	})
 
 	return retBody.Data, err
-}
-
-func (c *client) GetLatestByName(name string) (Credential, error) {
-	return Credential{}, nil
 }
 
 func (c *client) Set(credential Credential) (Credential, error) {
