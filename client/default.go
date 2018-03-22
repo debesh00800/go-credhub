@@ -17,6 +17,8 @@ type client struct {
 	hc  *http.Client
 }
 
+var errNotImpl = errors.New("unimplemented")
+
 // New creates a new Credhub client with OAuth2 authentication
 func New(credhubURL, clientID, clientSecret string, skipTLSVerify bool) (Credhub, error) {
 	var cli *http.Client
@@ -30,6 +32,43 @@ func New(credhubURL, clientID, clientSecret string, skipTLSVerify bool) (Credhub
 		hc:  cli,
 	}, nil
 }
+
+func (c *client) ListAllCredentials() ([]Credential, error) {
+	return nil, errNotImpl
+}
+
+func (c *client) GetByID(id string) (Credential, error) {
+	return Credential{}, errNotImpl
+}
+
+func (c *client) GetAllByName(name string) ([]Credential, error) {
+	return c.getByName(name, false, -1)
+}
+
+func (c *client) GetVersionsByName(name string, numVersions int) ([]Credential, error) {
+	return c.getByName(name, false, numVersions)
+}
+
+func (c *client) GetLatestByName(name string) (Credential, error) {
+	creds, err := c.getByName(name, true, -1)
+	if err != nil {
+		return Credential{}, err
+	}
+
+	return creds[0], nil
+}
+
+func (c *client) Set(credential Credential) (Credential, error) {
+	return Credential{}, errNotImpl
+}
+
+func (c *client) Generate(name string, credentialType CredentialType, parameters map[string]interface{}) (Credential, error) {
+	return Credential{}, errNotImpl
+}
+
+func (c *client) Regenerate(name string) (Credential, error) { return Credential{}, errNotImpl }
+
+func (c *client) Delete(name string) error { return errNotImpl }
 
 func (c *client) FindByPath(path string) ([]Credential, error) {
 	var retBody struct {
@@ -51,21 +90,20 @@ func (c *client) FindByPath(path string) ([]Credential, error) {
 	return retBody.Credentials, err
 }
 
-func (c *client) GetAllByName(name string) ([]Credential, error) {
-	return c.getByName(name, false, -1)
+func (c *client) FindByPartialName(partialName string) ([]Credential, error) {
+	return nil, errNotImpl
 }
 
-func (c *client) GetVersionsByName(name string, numVersions int) ([]Credential, error) {
-	return c.getByName(name, false, numVersions)
+func (c *client) GetPermissions(credentialName string) ([]Permission, error) {
+	return nil, errNotImpl
 }
 
-func (c *client) GetLatestByName(name string) (Credential, error) {
-	creds, err := c.getByName(name, true, -1)
-	if err != nil {
-		return Credential{}, err
-	}
+func (c *client) AddPermissions(credentialName string, newPerms []Permission) ([]Permission, error) {
+	return nil, errNotImpl
+}
 
-	return creds[0], nil
+func (c *client) DeletePermissions(credentialName, actorID string) error {
+	return errNotImpl
 }
 
 func (c *client) getByName(name string, latest bool, numVersions int) ([]Credential, error) {
@@ -111,8 +149,4 @@ func (c *client) getByName(name string, latest bool, numVersions int) ([]Credent
 	})
 
 	return retBody.Data, err
-}
-
-func (c *client) Set(credential Credential) (Credential, error) {
-	return Credential{}, nil
 }

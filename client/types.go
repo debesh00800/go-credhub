@@ -33,6 +33,11 @@ type Credential struct {
 	remarshalled bool
 }
 
+type Permission struct {
+	Actor      string   `json:"actor"`
+	Operations []string `json:"operations"`
+}
+
 type UserValueType struct {
 	Username     string `json:"username"`
 	Password     string `json:"password"`
