@@ -62,7 +62,7 @@ func infoHandler(uaaURL string, w http.ResponseWriter, r *http.Request) {
 }
 
 func returnFromFile(query, value string, w http.ResponseWriter, r *http.Request) {
-	filePath := path.Join("fixtures", query, "fake-"+value+".json")
+	filePath := path.Join("fixtures", query, value+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
