@@ -3,7 +3,9 @@ package client
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -49,8 +51,12 @@ func (c *client) FindByPath(path string) ([]Credential, error) {
 	return retBody.Credentials, err
 }
 
-func (c *client) GetByName(name string) ([]Credential, error) {
+func (c *client) GetAllByName(name string) ([]Credential, error) {
 	return c.getByName(name, false, -1)
+}
+
+func (c *client) GetVersionsByName(name string, numVersions int) ([]Credential, error) {
+	return c.getByName(name, false, numVersions)
 }
 
 func (c *client) GetLatestByName(name string) (Credential, error) {
@@ -66,7 +72,22 @@ func (c *client) getByName(name string, latest bool, numVersions int) ([]Credent
 	var retBody struct {
 		Data []Credential `json:"data"`
 	}
-	resp, err := c.hc.Get(c.url + "/api/v1/data?name=" + name)
+
+	chURL := c.url + "/api/v1/data?"
+
+	params := url.Values{}
+	params.Add("name", name)
+
+	if latest {
+		params.Add("current", "true")
+	}
+
+	if numVersions > 0 {
+		params.Add("versions", fmt.Sprint(numVersions))
+	}
+
+	chURL += params.Encode()
+	resp, err := c.hc.Get(chURL)
 	if err != nil {
 		return retBody.Data, err
 	}

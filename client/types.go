@@ -153,7 +153,6 @@ func CertificateValue(cred Credential) (CertificateValueType, error) {
 
 			cred.Value = val
 			cred.remarshalled = true
-
 		}
 
 		return cred.Value.(CertificateValueType), nil

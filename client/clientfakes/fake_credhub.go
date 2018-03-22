@@ -8,30 +8,30 @@ import (
 )
 
 type FakeCredhub struct {
-	FindByPathStub        func(path string) (client.FindByPathResults, error)
+	FindByPathStub        func(path string) ([]client.Credential, error)
 	findByPathMutex       sync.RWMutex
 	findByPathArgsForCall []struct {
 		path string
 	}
 	findByPathReturns struct {
-		result1 client.FindByPathResults
+		result1 []client.Credential
 		result2 error
 	}
 	findByPathReturnsOnCall map[int]struct {
-		result1 client.FindByPathResults
+		result1 []client.Credential
 		result2 error
 	}
-	GetByNameStub        func(name string) (client.GetByNameResults, error)
-	getByNameMutex       sync.RWMutex
-	getByNameArgsForCall []struct {
+	GetAllByNameStub        func(name string) ([]client.Credential, error)
+	getAllByNameMutex       sync.RWMutex
+	getAllByNameArgsForCall []struct {
 		name string
 	}
-	getByNameReturns struct {
-		result1 client.GetByNameResults
+	getAllByNameReturns struct {
+		result1 []client.Credential
 		result2 error
 	}
-	getByNameReturnsOnCall map[int]struct {
-		result1 client.GetByNameResults
+	getAllByNameReturnsOnCall map[int]struct {
+		result1 []client.Credential
 		result2 error
 	}
 	GetLatestByNameStub        func(name string) (client.Credential, error)
@@ -64,7 +64,7 @@ type FakeCredhub struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCredhub) FindByPath(path string) (client.FindByPathResults, error) {
+func (fake *FakeCredhub) FindByPath(path string) ([]client.Credential, error) {
 	fake.findByPathMutex.Lock()
 	ret, specificReturn := fake.findByPathReturnsOnCall[len(fake.findByPathArgsForCall)]
 	fake.findByPathArgsForCall = append(fake.findByPathArgsForCall, struct {
@@ -93,75 +93,75 @@ func (fake *FakeCredhub) FindByPathArgsForCall(i int) string {
 	return fake.findByPathArgsForCall[i].path
 }
 
-func (fake *FakeCredhub) FindByPathReturns(result1 client.FindByPathResults, result2 error) {
+func (fake *FakeCredhub) FindByPathReturns(result1 []client.Credential, result2 error) {
 	fake.FindByPathStub = nil
 	fake.findByPathReturns = struct {
-		result1 client.FindByPathResults
+		result1 []client.Credential
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeCredhub) FindByPathReturnsOnCall(i int, result1 client.FindByPathResults, result2 error) {
+func (fake *FakeCredhub) FindByPathReturnsOnCall(i int, result1 []client.Credential, result2 error) {
 	fake.FindByPathStub = nil
 	if fake.findByPathReturnsOnCall == nil {
 		fake.findByPathReturnsOnCall = make(map[int]struct {
-			result1 client.FindByPathResults
+			result1 []client.Credential
 			result2 error
 		})
 	}
 	fake.findByPathReturnsOnCall[i] = struct {
-		result1 client.FindByPathResults
+		result1 []client.Credential
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeCredhub) GetByName(name string) (client.GetByNameResults, error) {
-	fake.getByNameMutex.Lock()
-	ret, specificReturn := fake.getByNameReturnsOnCall[len(fake.getByNameArgsForCall)]
-	fake.getByNameArgsForCall = append(fake.getByNameArgsForCall, struct {
+func (fake *FakeCredhub) GetAllByName(name string) ([]client.Credential, error) {
+	fake.getAllByNameMutex.Lock()
+	ret, specificReturn := fake.getAllByNameReturnsOnCall[len(fake.getAllByNameArgsForCall)]
+	fake.getAllByNameArgsForCall = append(fake.getAllByNameArgsForCall, struct {
 		name string
 	}{name})
-	fake.recordInvocation("GetByName", []interface{}{name})
-	fake.getByNameMutex.Unlock()
-	if fake.GetByNameStub != nil {
-		return fake.GetByNameStub(name)
+	fake.recordInvocation("GetAllByName", []interface{}{name})
+	fake.getAllByNameMutex.Unlock()
+	if fake.GetAllByNameStub != nil {
+		return fake.GetAllByNameStub(name)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.getByNameReturns.result1, fake.getByNameReturns.result2
+	return fake.getAllByNameReturns.result1, fake.getAllByNameReturns.result2
 }
 
-func (fake *FakeCredhub) GetByNameCallCount() int {
-	fake.getByNameMutex.RLock()
-	defer fake.getByNameMutex.RUnlock()
-	return len(fake.getByNameArgsForCall)
+func (fake *FakeCredhub) GetAllByNameCallCount() int {
+	fake.getAllByNameMutex.RLock()
+	defer fake.getAllByNameMutex.RUnlock()
+	return len(fake.getAllByNameArgsForCall)
 }
 
-func (fake *FakeCredhub) GetByNameArgsForCall(i int) string {
-	fake.getByNameMutex.RLock()
-	defer fake.getByNameMutex.RUnlock()
-	return fake.getByNameArgsForCall[i].name
+func (fake *FakeCredhub) GetAllByNameArgsForCall(i int) string {
+	fake.getAllByNameMutex.RLock()
+	defer fake.getAllByNameMutex.RUnlock()
+	return fake.getAllByNameArgsForCall[i].name
 }
 
-func (fake *FakeCredhub) GetByNameReturns(result1 client.GetByNameResults, result2 error) {
-	fake.GetByNameStub = nil
-	fake.getByNameReturns = struct {
-		result1 client.GetByNameResults
+func (fake *FakeCredhub) GetAllByNameReturns(result1 []client.Credential, result2 error) {
+	fake.GetAllByNameStub = nil
+	fake.getAllByNameReturns = struct {
+		result1 []client.Credential
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeCredhub) GetByNameReturnsOnCall(i int, result1 client.GetByNameResults, result2 error) {
-	fake.GetByNameStub = nil
-	if fake.getByNameReturnsOnCall == nil {
-		fake.getByNameReturnsOnCall = make(map[int]struct {
-			result1 client.GetByNameResults
+func (fake *FakeCredhub) GetAllByNameReturnsOnCall(i int, result1 []client.Credential, result2 error) {
+	fake.GetAllByNameStub = nil
+	if fake.getAllByNameReturnsOnCall == nil {
+		fake.getAllByNameReturnsOnCall = make(map[int]struct {
+			result1 []client.Credential
 			result2 error
 		})
 	}
-	fake.getByNameReturnsOnCall[i] = struct {
-		result1 client.GetByNameResults
+	fake.getAllByNameReturnsOnCall[i] = struct {
+		result1 []client.Credential
 		result2 error
 	}{result1, result2}
 }
@@ -273,8 +273,8 @@ func (fake *FakeCredhub) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.findByPathMutex.RLock()
 	defer fake.findByPathMutex.RUnlock()
-	fake.getByNameMutex.RLock()
-	defer fake.getByNameMutex.RUnlock()
+	fake.getAllByNameMutex.RLock()
+	defer fake.getAllByNameMutex.RUnlock()
 	fake.getLatestByNameMutex.RLock()
 	defer fake.getLatestByNameMutex.RUnlock()
 	fake.setMutex.RLock()

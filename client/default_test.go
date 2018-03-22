@@ -38,13 +38,15 @@ func TestCredhubClient(t *testing.T) {
 				}
 			} else if num <= 0 {
 				return func() {
-					creds, err := chClient.GetByName("/concourse/common/sample-value")
+					creds, err := chClient.GetAllByName("/concourse/common/sample-value")
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(len(creds)).To(Equal(3))
 				}
 			} else {
 				return func() {
-					Expect(false).To(BeTrue(), "unimplemented")
+					creds, err := chClient.GetVersionsByName("/concourse/common/sample-value", num)
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(len(creds)).To(Equal(num))
 				}
 			}
 		}
@@ -58,14 +60,16 @@ func TestCredhubClient(t *testing.T) {
 				}
 			} else if num <= 0 {
 				return func() {
-					creds, err := chClient.GetByName("/concourse/common/sample-password")
+					creds, err := chClient.GetAllByName("/concourse/common/sample-password")
 					Expect(err).To(BeNil())
 					Expect(len(creds)).To(Equal(3))
 					Expect(creds[2].Value).To(BeEquivalentTo("sample2"))
 				}
 			} else {
 				return func() {
-					Expect(false).To(BeTrue(), "unimplemented")
+					creds, err := chClient.GetVersionsByName("/concourse/common/sample-value", num)
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(len(creds)).To(Equal(num))
 				}
 			}
 		}
@@ -82,9 +86,9 @@ func TestCredhubClient(t *testing.T) {
 
 					Expect(val["foo"]).To(BeEquivalentTo("bar"))
 				}
-			} else {
+			} else if num <= 0 {
 				return func() {
-					creds, err := chClient.GetByName("/concourse/common/sample-json")
+					creds, err := chClient.GetAllByName("/concourse/common/sample-json")
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(len(creds)).To(Equal(3))
 
@@ -95,11 +99,17 @@ func TestCredhubClient(t *testing.T) {
 					Expect(int(val[0].(float64))).To(Equal(1))
 					Expect(int(val[1].(float64))).To(Equal(2))
 				}
+			} else {
+				return func() {
+					creds, err := chClient.GetVersionsByName("/concourse/common/sample-value", num)
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(len(creds)).To(Equal(num))
+				}
 			}
 		}
 
 		getUserByName := func() {
-			creds, err := chClient.GetByName("/concourse/common/sample-user")
+			creds, err := chClient.GetAllByName("/concourse/common/sample-user")
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(creds)).To(Equal(1))
 
@@ -112,7 +122,7 @@ func TestCredhubClient(t *testing.T) {
 		}
 
 		getSSHByName := func() {
-			creds, err := chClient.GetByName("/concourse/common/sample-ssh")
+			creds, err := chClient.GetAllByName("/concourse/common/sample-ssh")
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(creds)).To(Equal(1))
 
@@ -124,7 +134,7 @@ func TestCredhubClient(t *testing.T) {
 		}
 
 		getRSAByName := func() {
-			creds, err := chClient.GetByName("/concourse/common/sample-rsa")
+			creds, err := chClient.GetAllByName("/concourse/common/sample-rsa")
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(creds)).To(Equal(1))
 
@@ -136,12 +146,12 @@ func TestCredhubClient(t *testing.T) {
 		}
 
 		getNonexistentName := func() {
-			_, err := chClient.GetByName("/concourse/common/not-real")
+			_, err := chClient.GetAllByName("/concourse/common/not-real")
 			Expect(err).To(HaveOccurred())
 		}
 
 		getCertificateByName := func() {
-			creds, err := chClient.GetByName("/concourse/common/sample-certificate")
+			creds, err := chClient.GetAllByName("/concourse/common/sample-certificate")
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(creds)).To(Equal(1))
 
@@ -191,6 +201,12 @@ func TestCredhubClient(t *testing.T) {
 				it("should get a 'value' type credential", valueByNameTests(true, -1))
 				it("should get a 'password' type credential", passwordByNameTests(true, -1))
 				it("should get a 'json' type credential", jsonByNameTests(true, -1))
+			})
+
+			when("Testing Get Latest By Name", func() {
+				it("should get a 'value' type credential", valueByNameTests(false, 2))
+				it("should get a 'password' type credential", passwordByNameTests(false, 2))
+				it("should get a 'json' type credential", jsonByNameTests(false, 2))
 			})
 		})
 	}, spec.Report(report.Terminal{}))

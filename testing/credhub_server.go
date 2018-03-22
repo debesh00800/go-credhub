@@ -7,7 +7,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path"
+	"sort"
+	"strconv"
 	"strings"
+
+	"github.com/jghiloni/credhub-sdk/client"
 )
 
 // MockCredhubServer will create a mock server that is useful for unit testing
@@ -75,6 +79,40 @@ func returnFromFile(query, value string, w http.ResponseWriter, r *http.Request)
 		w.Write([]byte("{}"))
 
 		return
+	}
+
+	params := r.URL.Query()
+	name := params.Get("name")
+	if name != "" {
+		currentStr := params.Get("current")
+		versionsStr := params.Get("versions")
+
+		var ret struct {
+			Data []client.Credential `json:"data"`
+		}
+
+		if err = json.Unmarshal(buf, &ret); err != nil {
+			w.WriteHeader(500)
+		}
+
+		sort.Slice(ret.Data, func(i, j int) bool {
+			less := strings.Compare(ret.Data[i].Created, ret.Data[j].Created)
+			return less > 0
+		})
+
+		current, _ := strconv.ParseBool(currentStr)
+		if current {
+			data := ret.Data[0:1]
+			ret.Data = data
+		} else {
+			nv, _ := strconv.Atoi(versionsStr)
+			if nv > 0 {
+				data := ret.Data[0:nv]
+				ret.Data = data
+			}
+		}
+
+		buf, _ = json.Marshal(ret)
 	}
 
 	w.WriteHeader(200)
