@@ -174,6 +174,22 @@ func TestCredhubClient(t *testing.T) {
 			Expect(cred.Name).To(BeEquivalentTo("/by-id"))
 		}
 
+		setCredential := func() {
+			cred := client.Credential{
+				Name: "/sample-set",
+				Type: "user",
+				Value: client.UserValueType{
+					Username:     "me",
+					Password:     "super-secret",
+					PasswordHash: "somestring",
+				},
+			}
+
+			newCred, err := chClient.Set(cred)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(newCred.Created).To(Not(BeEmpty()))
+		}
+
 		it.Before(func() {
 			RegisterTestingT(t)
 			server = sdktest.MockCredhubServer()
@@ -227,6 +243,10 @@ func TestCredhubClient(t *testing.T) {
 
 			when("Testing Get By ID", func() {
 				it("should get an item with a valid ID", getById)
+			})
+
+			when("Testing Set Credential", func() {
+				it("should receive the same item it sent, but with a timestamp", setCredential)
 			})
 		})
 	}, spec.Report(report.Terminal{}))

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -102,7 +103,29 @@ func (c *client) GetLatestByName(name string) (Credential, error) {
 }
 
 func (c *client) Set(credential Credential) (Credential, error) {
-	return Credential{}, errNotImpl
+	buf, err := json.Marshal(credential)
+	if err != nil {
+		return Credential{}, err
+	}
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", c.url+"/api/v1/data", bytes.NewBuffer(buf))
+	if err != nil {
+		return Credential{}, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return Credential{}, err
+	}
+
+	var cred Credential
+	unmarshaller := json.NewDecoder(resp.Body)
+	err = unmarshaller.Decode(&cred)
+
+	return cred, err
 }
 
 func (c *client) Generate(name string, credentialType CredentialType, parameters map[string]interface{}) (Credential, error) {

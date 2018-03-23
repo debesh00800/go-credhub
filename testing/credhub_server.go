@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jghiloni/credhub-api/client"
 )
@@ -17,9 +18,8 @@ import (
 // MockCredhubServer will create a mock server that is useful for unit testing
 func MockCredhubServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uaa := mockUaaServer()
 		if r.URL.Path == "/info" {
-			infoHandler(uaa.URL, w, r)
+			infoHandler(w, r)
 			return
 		}
 
@@ -28,37 +28,68 @@ func MockCredhubServer() *httptest.Server {
 			w.WriteHeader(401)
 			return
 		}
-		switch r.URL.Path {
-		case "/some-url":
-			w.Write([]byte("Hello world"))
-		case "/api/v1/data":
-			path := r.FormValue("path")
-			name := r.FormValue("name")
-			paths := r.FormValue("paths")
 
-			switch {
-			case path != "" && name == "":
-				returnFromFile("bypath", path, w, r)
-			case path == "" && name != "":
-				returnFromFile("byname", name, w, r)
-			case paths == "true":
-				returnFromFile("", "allpaths", w, r)
-			default:
-				w.WriteHeader(400)
-			}
-		case "/api/v1/data/1234":
-			returnFromFile("byid", "1234", w, r)
-		default:
-			w.WriteHeader(404)
+		switch strings.ToLower(r.Method) {
+		case "get":
+			getHandler(w, r)
+		case "post":
+			postHandler(w, r)
 		}
 	}))
 }
 
-func infoHandler(uaaURL string, w http.ResponseWriter, r *http.Request) {
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/some-url":
+		w.Write([]byte("Hello world"))
+	case "/api/v1/data":
+		path := r.FormValue("path")
+		name := r.FormValue("name")
+		paths := r.FormValue("paths")
+
+		switch {
+		case path != "" && name == "":
+			returnFromFile("bypath", path, w, r)
+		case path == "" && name != "":
+			returnFromFile("byname", name, w, r)
+		case paths == "true":
+			returnFromFile("", "allpaths", w, r)
+		default:
+			w.WriteHeader(400)
+		}
+	case "/api/v1/data/1234":
+		returnFromFile("byid", "1234", w, r)
+	default:
+		w.WriteHeader(404)
+	}
+}
+
+func postHandler(w http.ResponseWriter, r *http.Request) {
+
+	switch r.URL.Path {
+	case "/api/v1/data":
+		var cred client.Credential
+		unmarshaller := json.NewDecoder(r.Body)
+		if err := unmarshaller.Decode(&cred); err != nil {
+			w.WriteHeader(400)
+		}
+
+		t := time.Now()
+		cred.Created = t.Format(time.RFC3339)
+		buf, e := json.Marshal(cred)
+		if e != nil {
+			w.WriteHeader(500)
+		}
+
+		w.Write(buf)
+	}
+}
+
+func infoHandler(w http.ResponseWriter, r *http.Request) {
 	body := make(map[string]interface{})
 
 	url := make(map[string]string)
-	url["url"] = uaaURL
+	url["url"] = mockUaaServer().URL
 
 	body["auth-server"] = url
 
