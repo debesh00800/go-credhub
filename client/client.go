@@ -4,7 +4,7 @@ package client
 
 // Credhub - the main entry point
 type Credhub interface {
-	ListAllCredentials() ([]Credential, error)
+	ListAllPaths() ([]string, error)
 
 	GetByID(id string) (Credential, error)
 	GetAllByName(name string) ([]Credential, error)

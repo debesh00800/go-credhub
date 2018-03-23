@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jghiloni/credhub-sdk/auth"
+	"github.com/jghiloni/credhub-api/auth"
 )
 
 type client struct {
@@ -33,12 +33,55 @@ func New(credhubURL, clientID, clientSecret string, skipTLSVerify bool) (Credhub
 	}, nil
 }
 
-func (c *client) ListAllCredentials() ([]Credential, error) {
-	return nil, errNotImpl
+func (c *client) ListAllPaths() ([]string, error) {
+	var retBody struct {
+		Paths []struct {
+			Path string `json:"path"`
+		} `json:"paths"`
+	}
+
+	resp, err := c.hc.Get(c.url + "/api/v1/data?paths=true")
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == 404 {
+		return nil, errors.New("path not found")
+	}
+
+	marshaller := json.NewDecoder(resp.Body)
+
+	if err = marshaller.Decode(&retBody); err != nil {
+		return nil, err
+	}
+
+	paths := make([]string, 0, len(retBody.Paths))
+	for _, path := range retBody.Paths {
+		paths = append(paths, path.Path)
+	}
+
+	return paths, nil
 }
 
 func (c *client) GetByID(id string) (Credential, error) {
-	return Credential{}, errNotImpl
+	var cred Credential
+
+	resp, err := c.hc.Get(c.url + "/api/v1/data/" + id)
+	if err != nil {
+		return cred, err
+	}
+
+	if resp.StatusCode == 404 {
+		return cred, errors.New("path not found")
+	}
+
+	marshaller := json.NewDecoder(resp.Body)
+
+	if err = marshaller.Decode(&cred); err != nil {
+		return cred, err
+	}
+
+	return cred, nil
 }
 
 func (c *client) GetAllByName(name string) ([]Credential, error) {
@@ -81,7 +124,7 @@ func (c *client) FindByPath(path string) ([]Credential, error) {
 	}
 
 	if resp.StatusCode == 404 {
-		return nil, errors.New("Path Not Found")
+		return nil, errors.New("path not found")
 	}
 
 	marshaller := json.NewDecoder(resp.Body)

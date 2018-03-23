@@ -6,8 +6,8 @@ import (
 
 	"net/url"
 
-	"github.com/jghiloni/credhub-sdk/auth"
-	sdktest "github.com/jghiloni/credhub-sdk/testing"
+	"github.com/jghiloni/credhub-api/auth"
+	sdktest "github.com/jghiloni/credhub-api/testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"

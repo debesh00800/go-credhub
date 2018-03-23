@@ -4,8 +4,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jghiloni/credhub-sdk/client"
-	sdktest "github.com/jghiloni/credhub-sdk/testing"
+	"github.com/jghiloni/credhub-api/client"
+	sdktest "github.com/jghiloni/credhub-api/testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
@@ -162,6 +162,18 @@ func TestCredhubClient(t *testing.T) {
 			Expect(val.Certificate).To(HavePrefix("-----BEGIN CERTIFICATE-----"))
 		}
 
+		listAllByPath := func() {
+			paths, err := chClient.ListAllPaths()
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(paths).To(HaveLen(5))
+		}
+
+		getById := func() {
+			cred, err := chClient.GetByID("1234")
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(cred.Name).To(BeEquivalentTo("/by-id"))
+		}
+
 		it.Before(func() {
 			RegisterTestingT(t)
 			server = sdktest.MockCredhubServer()
@@ -207,6 +219,14 @@ func TestCredhubClient(t *testing.T) {
 				it("should get a 'value' type credential", valueByNameTests(false, 2))
 				it("should get a 'password' type credential", passwordByNameTests(false, 2))
 				it("should get a 'json' type credential", jsonByNameTests(false, 2))
+			})
+
+			when("Testing List All Paths", func() {
+				it("should list all paths", listAllByPath)
+			})
+
+			when("Testing Get By ID", func() {
+				it("should get an item with a valid ID", getById)
 			})
 		})
 	}, spec.Report(report.Terminal{}))

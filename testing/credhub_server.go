@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jghiloni/credhub-sdk/client"
+	"github.com/jghiloni/credhub-api/client"
 )
 
 // MockCredhubServer will create a mock server that is useful for unit testing
@@ -34,15 +34,22 @@ func MockCredhubServer() *httptest.Server {
 		case "/api/v1/data":
 			path := r.FormValue("path")
 			name := r.FormValue("name")
+			paths := r.FormValue("paths")
 
 			switch {
 			case path != "" && name == "":
 				returnFromFile("bypath", path, w, r)
 			case path == "" && name != "":
 				returnFromFile("byname", name, w, r)
+			case paths == "true":
+				returnFromFile("", "allpaths", w, r)
 			default:
 				w.WriteHeader(400)
 			}
+		case "/api/v1/data/1234":
+			returnFromFile("byid", "1234", w, r)
+		default:
+			w.WriteHeader(404)
 		}
 	}))
 }
