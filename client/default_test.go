@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/jghiloni/credhub-api/client"
-	sdktest "github.com/jghiloni/credhub-api/testing"
+	apitest "github.com/jghiloni/credhub-api/testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
@@ -192,7 +192,7 @@ func TestCredhubClient(t *testing.T) {
 
 		it.Before(func() {
 			RegisterTestingT(t)
-			server = sdktest.MockCredhubServer()
+			server = apitest.MockCredhubServer()
 		})
 
 		when("Running with UAA Authorization", func() {
@@ -247,6 +247,18 @@ func TestCredhubClient(t *testing.T) {
 
 			when("Testing Set Credential", func() {
 				it("should receive the same item it sent, but with a timestamp", setCredential)
+			})
+
+			when("Testing Generate Credential", func() {
+				it("should generate a password credential", func() {
+					params := make(map[string]interface{})
+					params["length"] = 30
+					cred, err := chClient.Generate("/example-generated", "password", params)
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(cred.Type).To(Equal(client.Password))
+					Expect(cred.Value).To(BeAssignableToTypeOf("expected"))
+					Expect(cred.Value).To(HaveLen(30))
+				})
 			})
 		})
 	}, spec.Report(report.Terminal{}))

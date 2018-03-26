@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/jghiloni/credhub-api/auth"
-	sdktest "github.com/jghiloni/credhub-api/testing"
+	apitest "github.com/jghiloni/credhub-api/testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
@@ -16,7 +16,7 @@ import (
 
 func TestOAuthClient(t *testing.T) {
 	spec.Run(t, "OAuth2 Client", func(t *testing.T, when spec.G, it spec.S) {
-		cs := sdktest.MockCredhubServer()
+		cs := apitest.MockCredhubServer()
 		it.Before(func() {
 			RegisterTestingT(t)
 		})

@@ -65,15 +65,31 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postHandler(w http.ResponseWriter, r *http.Request) {
-
 	switch r.URL.Path {
 	case "/api/v1/data":
+		var generateBody struct {
+			Name   string                 `json:"name"`
+			Type   client.CredentialType  `json:"type"`
+			Params map[string]interface{} `json:"parameters"`
+		}
+
 		var cred client.Credential
-		unmarshaller := json.NewDecoder(r.Body)
-		if err := unmarshaller.Decode(&cred); err != nil {
+		buf, _ := ioutil.ReadAll(r.Body)
+		if err := json.Unmarshal(buf, &cred); err != nil {
 			w.WriteHeader(400)
 		}
 
+		if cred.Value == nil {
+			if err := json.Unmarshal(buf, &generateBody); err != nil {
+				w.WriteHeader(400)
+			} else if generateBody.Params != nil {
+				cred.Name = generateBody.Name
+				cred.Type = generateBody.Type
+				cred.Value = "1234567890asdfghjkl;ZXCVBNM<$P"
+			} else {
+				w.WriteHeader(400)
+			}
+		}
 		t := time.Now()
 		cred.Created = t.Format(time.RFC3339)
 		buf, e := json.Marshal(cred)
