@@ -159,7 +159,37 @@ func (c *client) Generate(name string, credentialType CredentialType, parameters
 	return cred, err
 }
 
-func (c *client) Regenerate(name string) (Credential, error) { return Credential{}, errNotImpl }
+func (c *client) Regenerate(name string) (Credential, error) {
+	reqBody := struct {
+		Name string `json:"name"`
+	}{
+		Name: name,
+	}
+
+	buf, err := json.Marshal(reqBody)
+	if err != nil {
+		return Credential{}, err
+	}
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", c.url+"/api/v1/data/regenerate", bytes.NewBuffer(buf))
+	if err != nil {
+		return Credential{}, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return Credential{}, err
+	}
+
+	var cred Credential
+	unmarshaller := json.NewDecoder(resp.Body)
+	err = unmarshaller.Decode(&cred)
+
+	return cred, err
+}
 
 func (c *client) Delete(name string) error { return errNotImpl }
 

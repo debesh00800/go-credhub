@@ -98,6 +98,27 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Write(buf)
+	case "/api/v1/data/regenerate":
+		var body struct {
+			Name string `json:"name"`
+		}
+
+		var cred client.Credential
+		buf, _ := ioutil.ReadAll(r.Body)
+		if err := json.Unmarshal(buf, &body); err != nil {
+			w.WriteHeader(400)
+		}
+
+		cred.Name = body.Name
+		cred.Type = client.Password
+		cred.Value = "P$<MNBVCXZ;lkjhgfdsa0987654321"
+		cred.Created = time.Now().Format(time.RFC3339)
+		buf, e := json.Marshal(cred)
+		if e != nil {
+			w.WriteHeader(500)
+		}
+
+		w.Write(buf)
 	}
 }
 

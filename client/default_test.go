@@ -260,6 +260,16 @@ func TestCredhubClient(t *testing.T) {
 					Expect(cred.Value).To(HaveLen(30))
 				})
 			})
+
+			when("Testing Regenerate Credential", func() {
+				it("should regenerate a password credential", func() {
+					cred, err := chClient.Regenerate("/example-password")
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(cred.Type).To(Equal(client.Password))
+					Expect(cred.Value).To(BeAssignableToTypeOf("expected"))
+					Expect(cred.Value).To(BeEquivalentTo("P$<MNBVCXZ;lkjhgfdsa0987654321"))
+				})
+			})
 		})
 	}, spec.Report(report.Terminal{}))
 }
