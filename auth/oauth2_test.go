@@ -1,13 +1,16 @@
 package auth_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"net/http"
 	"net/url"
 
 	"github.com/jghiloni/credhub-api/auth"
 	apitest "github.com/jghiloni/credhub-api/internal/testing"
+	"golang.org/x/oauth2/clientcredentials"
 
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
@@ -22,9 +25,9 @@ func TestOAuthClient(t *testing.T) {
 		})
 
 		it("should work if credentials are correct", func() {
-			client, err := auth.NewOAuthClient(cs.URL, "user", "pass", false)
+			client, err := getClient(cs.URL, "user", "pass")
 			Expect(client).To(Not(BeNil()))
-			Expect(err).To(BeNil())
+			Expect(err).To(Not(HaveOccurred()))
 
 			r, err2 := client.Get(cs.URL + "/some-url")
 			Expect(r).To(Not(BeNil()))
@@ -33,9 +36,9 @@ func TestOAuthClient(t *testing.T) {
 		})
 
 		it("should not work if credentials are incorrect", func() {
-			client, err := auth.NewOAuthClient(cs.URL, "baduser", "badpass", false)
+			client, err := getClient(cs.URL, "baduser", "badpass")
 			Expect(client).To(Not(BeNil()))
-			Expect(err).To(BeNil())
+			Expect(err).To(Not(HaveOccurred()))
 
 			r, err2 := client.Get(cs.URL + "/some-url")
 			Expect(r).To(BeNil())
@@ -45,4 +48,21 @@ func TestOAuthClient(t *testing.T) {
 			Expect(strings.HasSuffix(urlerr.Error(), "401 Unauthorized"))
 		})
 	}, spec.Report(report.Terminal{}))
+}
+
+func getClient(cu, ci, cs string) (*http.Client, error) {
+	ctx := context.Background()
+	endpoint, err := auth.UAAEndpoint(cu, true)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &clientcredentials.Config{
+		ClientID:     ci,
+		ClientSecret: cs,
+		TokenURL:     endpoint.TokenURL,
+		Scopes:       []string{"credhub.read", "credhub.write"},
+	}
+
+	return cfg.Client(ctx), nil
 }

@@ -1,8 +1,11 @@
 package client_test
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/jghiloni/credhub-api/auth"
 
 	"github.com/jghiloni/credhub-api/client"
 	apitest "github.com/jghiloni/credhub-api/internal/testing"
@@ -10,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
+
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 func TestCredhubClient(t *testing.T) {
@@ -198,16 +203,37 @@ func TestCredhubClient(t *testing.T) {
 		when("Running with UAA Authorization", func() {
 			it.Before(func() {
 				var err error
-				chClient, err = client.New(server.URL, "user", "pass", false)
+
+				endpoint, err := auth.UAAEndpoint(server.URL, false)
 				Expect(err).To(Not(HaveOccurred()))
+
+				ctx := context.Background()
+				cfg := &clientcredentials.Config{
+					ClientID:     "user",
+					ClientSecret: "pass",
+					Scopes:       []string{"credhub.read", "credhub.write"},
+					TokenURL:     endpoint.TokenURL,
+				}
+
+				chClient = client.New(server.URL, cfg.Client(ctx))
 			})
 
 			when("Testing Find By Path", func() {
 				it("should be able to find creds by path", findByGoodPath)
 				it("should not be able to find creds with an unknown path", findByBadPath)
 				it("should not be able to find creds with bad auth", func() {
-					badClient, err := client.New(server.URL, "asdf", "asdf", true)
-					Expect(err).To(BeNil())
+					endpoint, err := auth.UAAEndpoint(server.URL, false)
+					Expect(err).To(Not(HaveOccurred()))
+
+					ctx := context.Background()
+					cfg := &clientcredentials.Config{
+						ClientID:     "asdf",
+						ClientSecret: "asdf",
+						Scopes:       []string{"credhub.read", "credhub.write"},
+						TokenURL:     endpoint.TokenURL,
+					}
+
+					badClient := client.New(server.URL, cfg.Client(ctx))
 
 					_, err = badClient.FindByPath("/some/path")
 					Expect(err).To(HaveOccurred())

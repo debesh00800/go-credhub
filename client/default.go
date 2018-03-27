@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"sort"
 	"strings"
-
-	"github.com/jghiloni/credhub-api/auth"
 )
 
 type client struct {
@@ -21,18 +19,12 @@ type client struct {
 
 var errNotImpl = errors.New("unimplemented")
 
-// New creates a new Credhub client with OAuth2 authentication
-func New(credhubURL, clientID, clientSecret string, skipTLSVerify bool) (Credhub, error) {
-	var cli *http.Client
-	var err error
-	if cli, err = auth.NewOAuthClient(credhubURL, clientID, clientSecret, skipTLSVerify); err != nil {
-		return nil, err
-	}
-
+// New creates a new Credhub client
+func New(credhubURL string, hc *http.Client) Credhub {
 	return &client{
 		url: credhubURL,
-		hc:  cli,
-	}, nil
+		hc:  hc,
+	}
 }
 
 func (c *client) ListAllPaths() ([]string, error) {
