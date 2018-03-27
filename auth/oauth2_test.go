@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/jghiloni/credhub-api/auth"
-	apitest "github.com/jghiloni/credhub-api/testing"
+	apitest "github.com/jghiloni/credhub-api/internal/testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"

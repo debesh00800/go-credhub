@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/jghiloni/credhub-api/client"
-	apitest "github.com/jghiloni/credhub-api/testing"
+	apitest "github.com/jghiloni/credhub-api/internal/testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
