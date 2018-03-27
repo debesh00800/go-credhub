@@ -15,6 +15,8 @@ import (
 	"github.com/jghiloni/credhub-api/client"
 )
 
+type credentialFile map[string][]client.Credential
+
 // MockCredhubServer will create a mock server that is useful for unit testing
 func MockCredhubServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -39,29 +41,72 @@ func MockCredhubServer() *httptest.Server {
 }
 
 func getHandler(w http.ResponseWriter, r *http.Request) {
+	ret := make(map[string]interface{})
+	key := "data"
+
+	var creds []client.Credential
+	var err error
 	switch r.URL.Path {
 	case "/some-url":
 		w.Write([]byte("Hello world"))
+		return
 	case "/api/v1/data":
 		path := r.FormValue("path")
 		name := r.FormValue("name")
 		paths := r.FormValue("paths")
+		nameLike := r.FormValue("name-like")
 
 		switch {
-		case path != "" && name == "":
-			returnFromFile("bypath", path, w, r)
-		case path == "" && name != "":
-			returnFromFile("byname", name, w, r)
+		case path != "":
+			key = "credentials"
+			creds, err = returnFromFile("bypath", path, key, w, r)
+		case name != "":
+			creds, err = returnFromFile("byname", name, key, w, r)
 		case paths == "true":
-			returnFromFile("", "allpaths", w, r)
+			// creds, err = returnFromFile("", "allpaths", w, r)
+			directWriteFile("fixtures/allpaths.json", w, r)
+			return
+		case nameLike != "":
+			key = "credentials"
+			creds, err = returnFromFile("bypath", "/concourse/common", key, w, r)
+			idxs := make([]int, 0, len(creds))
+			for idx, cred := range creds {
+				if !strings.Contains(strings.ToLower(cred.Name), strings.ToLower(nameLike)) {
+					// get the list of bad indices in high to low order so as to most easily delete them
+					idxs = append([]int{idx}, idxs...)
+				}
+			}
+
+			for _, i := range idxs {
+				creds = append(creds[:i], creds[i+1:]...)
+			}
 		default:
 			w.WriteHeader(400)
+			return
 		}
 	case "/api/v1/data/1234":
-		returnFromFile("byid", "1234", w, r)
+		directWriteFile("fixtures/byid/1234.json", w, r)
+		return
 	default:
 		w.WriteHeader(404)
+		return
 	}
+
+	if err != nil {
+		w.WriteHeader(400)
+		return
+	}
+
+	ret[key] = creds
+
+	buf, err := json.Marshal(ret)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(buf)
 }
 
 func postHandler(w http.ResponseWriter, r *http.Request) {
@@ -140,57 +185,61 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(out)
 }
 
-func returnFromFile(query, value string, w http.ResponseWriter, r *http.Request) {
+func returnFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]client.Credential, error) {
 	filePath := path.Join("fixtures", query, value+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			w.WriteHeader(404)
-		} else {
-			w.WriteHeader(500)
-		}
-
-		w.Header().Add("content-type", "application/json")
-		w.Write([]byte("{}"))
-
-		return
+		return nil, err
 	}
+
+	var creds []client.Credential
 
 	params := r.URL.Query()
 	name := params.Get("name")
+
+	ret := make(credentialFile)
+
+	if err = json.Unmarshal(buf, &ret); err != nil {
+		return nil, err
+	}
+
+	creds = ret[key]
+
 	if name != "" {
 		currentStr := params.Get("current")
 		versionsStr := params.Get("versions")
 
-		var ret struct {
-			Data []client.Credential `json:"data"`
-		}
-
-		if err = json.Unmarshal(buf, &ret); err != nil {
-			w.WriteHeader(500)
-		}
-
-		sort.Slice(ret.Data, func(i, j int) bool {
-			less := strings.Compare(ret.Data[i].Created, ret.Data[j].Created)
+		sort.Slice(ret[key], func(i, j int) bool {
+			less := strings.Compare(ret[key][i].Created, ret[key][j].Created)
 			return less > 0
 		})
 
 		current, _ := strconv.ParseBool(currentStr)
 		if current {
-			data := ret.Data[0:1]
-			ret.Data = data
+			data := ret[key][0:1]
+			ret[key] = data
 		} else {
 			nv, _ := strconv.Atoi(versionsStr)
 			if nv > 0 {
-				data := ret.Data[0:nv]
-				ret.Data = data
+				data := ret[key][0:nv]
+				ret[key] = data
 			}
 		}
 
-		buf, _ = json.Marshal(ret)
+		creds = ret[key]
 	}
 
-	w.WriteHeader(200)
-	w.Header().Add("Content-Type", "applicaton/json")
+	return creds, nil
+}
+
+func directWriteFile(path string, w http.ResponseWriter, r *http.Request) {
+	buf, err := ioutil.ReadFile(path)
+	if os.IsNotExist(err) {
+		w.WriteHeader(404)
+		return
+	} else if err != nil {
+		w.WriteHeader(500)
+	}
+
 	w.Write(buf)
 }

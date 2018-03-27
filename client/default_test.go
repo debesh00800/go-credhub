@@ -270,6 +270,17 @@ func TestCredhubClient(t *testing.T) {
 					Expect(cred.Value).To(BeEquivalentTo("P$<MNBVCXZ;lkjhgfdsa0987654321"))
 				})
 			})
+
+			when("Testing Find By Name", func() {
+				it("should return names with 'password' in them", func() {
+					creds, err := chClient.FindByPartialName("password")
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(creds).To(HaveLen(2))
+					for _, cred := range creds {
+						Expect(cred.Name).To(ContainSubstring("password"))
+					}
+				})
+			})
 		})
 	}, spec.Report(report.Terminal{}))
 }

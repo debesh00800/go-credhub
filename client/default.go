@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
@@ -207,14 +208,25 @@ func (c *client) FindByPath(path string) ([]Credential, error) {
 		return nil, errors.New("path not found")
 	}
 
-	marshaller := json.NewDecoder(resp.Body)
-
-	err = marshaller.Decode(&retBody)
+	buf, _ := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(buf, &retBody)
 	return retBody.Credentials, err
 }
 
 func (c *client) FindByPartialName(partialName string) ([]Credential, error) {
-	return nil, errNotImpl
+	var retBody struct {
+		Credentials []Credential `json:"credentials"`
+	}
+
+	resp, err := c.hc.Get(c.url + "/api/v1/data?name-like=" + partialName)
+	if err != nil {
+		return nil, err
+	}
+
+	marshaller := json.NewDecoder(resp.Body)
+
+	err = marshaller.Decode(&retBody)
+	return retBody.Credentials, err
 }
 
 func (c *client) GetPermissions(credentialName string) ([]Permission, error) {
