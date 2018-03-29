@@ -25,7 +25,10 @@ const (
 	Certificate CredentialType = "certificate"
 )
 
+// Credential is the base type that the credential-based methods of Client will
+// return.
 type Credential struct {
+	ID           string         `json:"id"`
 	Name         string         `json:"name"`
 	Created      string         `json:"version_created_at"`
 	Type         CredentialType `json:"type,omitempty"`
@@ -33,34 +36,47 @@ type Credential struct {
 	remarshalled bool
 }
 
+// Permission represents the operations an actor is allowed to perform on a
+// credential
 type Permission struct {
 	Actor      string   `json:"actor"`
 	Operations []string `json:"operations"`
 }
 
+// UserValueType is what a `user` type credential will have. Use UserValue() to
+// get this from a `user` type Credential
 type UserValueType struct {
 	Username     string `json:"username"`
 	Password     string `json:"password"`
 	PasswordHash string `json:"password_hash"`
 }
 
+// RSAValueType is what a `rsa` type credential will have. Use RSAValue() to
+// get this from a `rsa` type Credential
 type RSAValueType struct {
 	PublicKey  string `json:"public_key"`
 	PrivateKey string `json:"private_key"`
 }
 
+// SSHValueType is what a `ssh` type credential will have. Use SSHValue() to
+// get this from a `ssh` type Credential
 type SSHValueType struct {
 	PublicKey            string `json:"public_key"`
 	PrivateKey           string `json:"private_key"`
 	PublicKeyFingerprint string `json:"public_key_fingerprint"`
 }
 
+// CertificateValueType is what a `certificate` type credential will have. Use
+// CertificateValue() to get this from a `certificate` type credential.
 type CertificateValueType struct {
 	CA          string `json:"ca"`
 	PrivateKey  string `json:"private_key"`
 	Certificate string `json:"certificate"`
 }
 
+// UserValue will remarshal a credential so that its Value is a UserValueType.
+// Use this method to get the UserValueType from the credential. Subsequent calls
+// to this return the remarshalled struct.
 func UserValue(cred Credential) (UserValueType, error) {
 	def := UserValueType{}
 	switch cred.Type {
@@ -87,6 +103,9 @@ func UserValue(cred Credential) (UserValueType, error) {
 	}
 }
 
+// RSAValue will remarshal a credential so that its Value is a RSAValueType.
+// Use this method to get the RSAValueType from the credential. Subsequent calls
+// to this return the remarshalled struct.
 func RSAValue(cred Credential) (RSAValueType, error) {
 	def := RSAValueType{}
 	switch cred.Type {
@@ -114,6 +133,9 @@ func RSAValue(cred Credential) (RSAValueType, error) {
 	}
 }
 
+// SSHValue will remarshal a credential so that its Value is a SSHValueType.
+// Use this method to get the SSHValueType from the credential. Subsequent calls
+// to this return the remarshalled struct.
 func SSHValue(cred Credential) (SSHValueType, error) {
 	def := SSHValueType{}
 	switch cred.Type {
@@ -140,6 +162,9 @@ func SSHValue(cred Credential) (SSHValueType, error) {
 	}
 }
 
+// CertificateValue will remarshal a credential so that its Value is a CertificateValueType.
+// Use this method to get the CertificateValueType from the credential. Subsequent calls
+// to this return the remarshalled struct.
 func CertificateValue(cred Credential) (CertificateValueType, error) {
 	def := CertificateValueType{}
 	switch cred.Type {
