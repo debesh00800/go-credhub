@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jghiloni/credhub-api"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 type credentialFile map[string][]credhub.Credential
@@ -36,6 +37,8 @@ func mockCredhubServer() *httptest.Server {
 			getHandler(w, r)
 		case "post":
 			postHandler(w, r)
+		case "put":
+			putHandler(w, r)
 		case "delete":
 			deleteHandler(w, r)
 		}
@@ -160,6 +163,67 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		cred.Type = credhub.Password
 		cred.Value = "P$<MNBVCXZ;lkjhgfdsa0987654321"
 		cred.Created = time.Now().Format(time.RFC3339)
+		buf, e := json.Marshal(cred)
+		if e != nil {
+			w.WriteHeader(500)
+		}
+
+		w.Write(buf)
+	}
+}
+
+func putHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/api/v1/data":
+		var cred credhub.Credential
+		var req struct {
+			credhub.Credential
+			Mode                  credhub.OverwriteMode `json:"mode"`
+			AdditionalPermissions []credhub.Permission  `json:"additonal_permissions,omitempty"`
+		}
+		buf, _ := ioutil.ReadAll(r.Body)
+		if err := json.Unmarshal(buf, &req); err != nil {
+			w.WriteHeader(400)
+		}
+
+		cred.Name = req.Name
+		cred.Type = req.Type
+		cred.Value = req.Value
+
+		switch req.Mode {
+		case credhub.Overwrite:
+			guid, err := uuid.NewV4()
+			if err != nil {
+				w.WriteHeader(500)
+			}
+			cred.ID = guid.String()
+		case credhub.NoOverwrite:
+			cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+			cred.Value = credhub.UserValueType{
+				Username:     "me",
+				Password:     "old",
+				PasswordHash: "old-hash",
+			}
+		case credhub.Converge:
+			v, err := credhub.UserValue(cred)
+			if err != nil {
+				w.WriteHeader(400)
+				return
+			}
+
+			if v.Password == "super-secret" {
+				cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+			} else {
+				guid, err := uuid.NewV4()
+				if err != nil {
+					w.WriteHeader(500)
+				}
+				cred.ID = guid.String()
+			}
+		}
+
+		t := time.Now()
+		cred.Created = t.Format(time.RFC3339)
 		buf, e := json.Marshal(cred)
 		if e != nil {
 			w.WriteHeader(500)

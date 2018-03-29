@@ -175,7 +175,7 @@ func TestCredhubClient(t *testing.T) {
 			Expect(cred.Name).To(BeEquivalentTo("/by-id"))
 		}
 
-		setCredential := func() {
+		setOverwriteCredential := func() {
 			cred := credhub.Credential{
 				Name: "/sample-set",
 				Type: "user",
@@ -186,9 +186,64 @@ func TestCredhubClient(t *testing.T) {
 				},
 			}
 
-			newCred, err := chClient.Set(cred)
+			newCred, err := chClient.Set(cred, credhub.Overwrite, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(newCred.Created).To(Not(BeEmpty()))
+			Expect(newCred.ID).To(Not(BeEmpty()))
+		}
+
+		setNoOverwriteCredential := func() {
+			cred := credhub.Credential{
+				Name: "/sample-set",
+				Type: "user",
+				Value: credhub.UserValueType{
+					Username:     "me",
+					Password:     "super-secret",
+					PasswordHash: "somestring",
+				},
+			}
+
+			newCred, err := chClient.Set(cred, credhub.NoOverwrite, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(newCred.Created).To(Not(BeEmpty()))
+			v, err := credhub.UserValue(newCred)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(v.Password).To(BeEquivalentTo("old"))
+			Expect(newCred.ID).To(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8"))
+		}
+
+		setConvergeCredentialWithoutDifference := func() {
+			cred := credhub.Credential{
+				Name: "/sample-set",
+				Type: "user",
+				Value: credhub.UserValueType{
+					Username:     "me",
+					Password:     "super-secret",
+					PasswordHash: "somestring",
+				},
+			}
+
+			newCred, err := chClient.Set(cred, credhub.Converge, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(newCred.Created).To(Not(BeEmpty()))
+			Expect(newCred.ID).To(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8"))
+		}
+
+		setConvergeCredentialWithDifference := func() {
+			cred := credhub.Credential{
+				Name: "/sample-set",
+				Type: "user",
+				Value: credhub.UserValueType{
+					Username:     "me",
+					Password:     "new-super-secret",
+					PasswordHash: "somestring",
+				},
+			}
+
+			newCred, err := chClient.Set(cred, credhub.Converge, nil)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(newCred.Created).To(Not(BeEmpty()))
+			Expect(newCred.ID).To(Not(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8")))
 		}
 
 		deleteFoundCredential := func() {
@@ -279,7 +334,10 @@ func TestCredhubClient(t *testing.T) {
 			})
 
 			when("Testing Set Credential", func() {
-				it("should receive the same item it sent, but with a timestamp", setCredential)
+				it("should receive the same item it sent, but with a timestamp", setOverwriteCredential)
+				it("should receive an old credential", setNoOverwriteCredential)
+				it("should receive an old credential if converging without changes", setConvergeCredentialWithoutDifference)
+				it("should receive a new credential if converging with changes", setConvergeCredentialWithDifference)
 			})
 
 			when("Testing Generate Credential", func() {

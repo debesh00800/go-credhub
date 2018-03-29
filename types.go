@@ -25,6 +25,18 @@ const (
 	Certificate CredentialType = "certificate"
 )
 
+// OverwriteMode is the list of valid "mode" arguments
+type OverwriteMode string
+
+const (
+	// Overwrite will overwrite an existing credential on Set or Generate
+	Overwrite OverwriteMode = "overwrite"
+	// NoOverwrite will not overwrite an existing credential on Set or Generate
+	NoOverwrite OverwriteMode = "no-overwrite"
+	// Converge will only overwrite an existing credential if the parameters have changed
+	Converge OverwriteMode = "converge"
+)
+
 // Credential is the base type that the credential-based methods of Client will
 // return.
 type Credential struct {
