@@ -20,7 +20,7 @@ type credentialFile map[string][]credhub.Credential
 
 // MockCredhubServer will create a mock server that is useful for unit testing
 func mockCredhubServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/info" {
 			infoHandler(w, r)
 			return

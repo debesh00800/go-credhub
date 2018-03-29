@@ -6,7 +6,7 @@ import (
 )
 
 func mockUaaServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/oauth/token" {
 			if err := r.ParseForm(); err != nil {
 				w.WriteHeader(400)

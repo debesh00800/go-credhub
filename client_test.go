@@ -2,6 +2,8 @@ package credhub_test
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
 
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
@@ -262,14 +265,24 @@ func TestCredhubClient(t *testing.T) {
 			server = mockCredhubServer()
 		})
 
+		it.After(func() {
+			server.Close()
+		})
+
 		when("Running with UAA Authorization", func() {
 			it.Before(func() {
 				var err error
 
-				endpoint, err := credhub.UAAEndpoint(server.URL, false)
+				endpoint, err := credhub.UAAEndpoint(server.URL, true)
 				Expect(err).To(Not(HaveOccurred()))
 
-				ctx := context.Background()
+				sslcli := &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+					},
+				}
+
+				ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
 				cfg := &clientcredentials.Config{
 					ClientID:     "user",
 					ClientSecret: "pass",
@@ -284,13 +297,19 @@ func TestCredhubClient(t *testing.T) {
 				it("should be able to find creds by path", findByGoodPath)
 				it("should not be able to find creds with an unknown path", findByBadPath)
 				it("should not be able to find creds with bad auth", func() {
-					endpoint, err := credhub.UAAEndpoint(server.URL, false)
+					endpoint, err := credhub.UAAEndpoint(server.URL, true)
 					Expect(err).To(Not(HaveOccurred()))
 
-					ctx := context.Background()
+					sslcli := &http.Client{
+						Transport: &http.Transport{
+							TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+						},
+					}
+
+					ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
 					cfg := &clientcredentials.Config{
-						ClientID:     "asdf",
-						ClientSecret: "asdf",
+						ClientID:     "user",
+						ClientSecret: "pass",
 						Scopes:       []string{"credhub.read", "credhub.write"},
 						TokenURL:     endpoint.TokenURL,
 					}
