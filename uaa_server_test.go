@@ -1,4 +1,4 @@
-package testing
+package credhub_test
 
 import (
 	"net/http"

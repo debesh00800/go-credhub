@@ -1,15 +1,11 @@
-package client_test
+package credhub_test
 
 import (
 	"context"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jghiloni/credhub-api/auth"
-
-	"github.com/jghiloni/credhub-api/client"
-	apitest "github.com/jghiloni/credhub-api/internal/testing"
-
+	credhub "github.com/jghiloni/credhub-api"
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
@@ -19,7 +15,7 @@ import (
 
 func TestCredhubClient(t *testing.T) {
 	spec.Run(t, "Credhub Client", func(t *testing.T, when spec.G, it spec.S) {
-		var chClient client.Credhub
+		var chClient *credhub.Client
 		var server *httptest.Server
 
 		findByGoodPath := func() {
@@ -120,8 +116,8 @@ func TestCredhubClient(t *testing.T) {
 
 			cred := creds[0]
 
-			var val client.UserValueType
-			val, err = client.UserValue(cred)
+			var val credhub.UserValueType
+			val, err = credhub.UserValue(cred)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(val.Username).To(Equal("me"))
 		}
@@ -132,8 +128,8 @@ func TestCredhubClient(t *testing.T) {
 			Expect(len(creds)).To(Equal(1))
 
 			cred := creds[0]
-			var val client.SSHValueType
-			val, err = client.SSHValue(cred)
+			var val credhub.SSHValueType
+			val, err = credhub.SSHValue(cred)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(val.PublicKey).To(HavePrefix("ssh-rsa"))
 		}
@@ -144,8 +140,8 @@ func TestCredhubClient(t *testing.T) {
 			Expect(len(creds)).To(Equal(1))
 
 			cred := creds[0]
-			var val client.RSAValueType
-			val, err = client.RSAValue(cred)
+			var val credhub.RSAValueType
+			val, err = credhub.RSAValue(cred)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(val.PrivateKey).To(HavePrefix("-----BEGIN PRIVATE KEY-----"))
 		}
@@ -161,8 +157,8 @@ func TestCredhubClient(t *testing.T) {
 			Expect(len(creds)).To(Equal(1))
 
 			cred := creds[0]
-			var val client.CertificateValueType
-			val, err = client.CertificateValue(cred)
+			var val credhub.CertificateValueType
+			val, err = credhub.CertificateValue(cred)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(val.Certificate).To(HavePrefix("-----BEGIN CERTIFICATE-----"))
 		}
@@ -180,10 +176,10 @@ func TestCredhubClient(t *testing.T) {
 		}
 
 		setCredential := func() {
-			cred := client.Credential{
+			cred := credhub.Credential{
 				Name: "/sample-set",
 				Type: "user",
-				Value: client.UserValueType{
+				Value: credhub.UserValueType{
 					Username:     "me",
 					Password:     "super-secret",
 					PasswordHash: "somestring",
@@ -197,14 +193,14 @@ func TestCredhubClient(t *testing.T) {
 
 		it.Before(func() {
 			RegisterTestingT(t)
-			server = apitest.MockCredhubServer()
+			server = mockCredhubServer()
 		})
 
 		when("Running with UAA Authorization", func() {
 			it.Before(func() {
 				var err error
 
-				endpoint, err := auth.UAAEndpoint(server.URL, false)
+				endpoint, err := credhub.UAAEndpoint(server.URL, false)
 				Expect(err).To(Not(HaveOccurred()))
 
 				ctx := context.Background()
@@ -215,14 +211,14 @@ func TestCredhubClient(t *testing.T) {
 					TokenURL:     endpoint.TokenURL,
 				}
 
-				chClient = client.New(server.URL, cfg.Client(ctx))
+				chClient = credhub.New(server.URL, cfg.Client(ctx))
 			})
 
 			when("Testing Find By Path", func() {
 				it("should be able to find creds by path", findByGoodPath)
 				it("should not be able to find creds with an unknown path", findByBadPath)
 				it("should not be able to find creds with bad auth", func() {
-					endpoint, err := auth.UAAEndpoint(server.URL, false)
+					endpoint, err := credhub.UAAEndpoint(server.URL, false)
 					Expect(err).To(Not(HaveOccurred()))
 
 					ctx := context.Background()
@@ -233,7 +229,7 @@ func TestCredhubClient(t *testing.T) {
 						TokenURL:     endpoint.TokenURL,
 					}
 
-					badClient := client.New(server.URL, cfg.Client(ctx))
+					badClient := credhub.New(server.URL, cfg.Client(ctx))
 
 					_, err = badClient.FindByPath("/some/path")
 					Expect(err).To(HaveOccurred())
@@ -281,7 +277,7 @@ func TestCredhubClient(t *testing.T) {
 					params["length"] = 30
 					cred, err := chClient.Generate("/example-generated", "password", params)
 					Expect(err).To(Not(HaveOccurred()))
-					Expect(cred.Type).To(Equal(client.Password))
+					Expect(cred.Type).To(Equal(credhub.Password))
 					Expect(cred.Value).To(BeAssignableToTypeOf("expected"))
 					Expect(cred.Value).To(HaveLen(30))
 				})
@@ -291,7 +287,7 @@ func TestCredhubClient(t *testing.T) {
 				it("should regenerate a password credential", func() {
 					cred, err := chClient.Regenerate("/example-password")
 					Expect(err).To(Not(HaveOccurred()))
-					Expect(cred.Type).To(Equal(client.Password))
+					Expect(cred.Type).To(Equal(credhub.Password))
 					Expect(cred.Value).To(BeAssignableToTypeOf("expected"))
 					Expect(cred.Value).To(BeEquivalentTo("P$<MNBVCXZ;lkjhgfdsa0987654321"))
 				})

@@ -1,4 +1,4 @@
-package auth_test
+package credhub_test
 
 import (
 	"context"
@@ -8,10 +8,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/jghiloni/credhub-api/auth"
-	apitest "github.com/jghiloni/credhub-api/internal/testing"
 	"golang.org/x/oauth2/clientcredentials"
 
+	credhub "github.com/jghiloni/credhub-api"
 	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
@@ -19,7 +18,7 @@ import (
 
 func TestOAuthClient(t *testing.T) {
 	spec.Run(t, "OAuth2 Client", func(t *testing.T, when spec.G, it spec.S) {
-		cs := apitest.MockCredhubServer()
+		cs := mockCredhubServer()
 		it.Before(func() {
 			RegisterTestingT(t)
 		})
@@ -52,7 +51,7 @@ func TestOAuthClient(t *testing.T) {
 
 func getClient(cu, ci, cs string) (*http.Client, error) {
 	ctx := context.Background()
-	endpoint, err := auth.UAAEndpoint(cu, true)
+	endpoint, err := credhub.UAAEndpoint(cu, true)
 	if err != nil {
 		return nil, err
 	}

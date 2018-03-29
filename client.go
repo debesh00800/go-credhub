@@ -1,4 +1,4 @@
-package client
+package credhub
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type client struct {
+type Client struct {
 	url string
 	hc  *http.Client
 }
@@ -20,14 +20,14 @@ type client struct {
 var errNotImpl = errors.New("unimplemented")
 
 // New creates a new Credhub client
-func New(credhubURL string, hc *http.Client) Credhub {
-	return &client{
+func New(credhubURL string, hc *http.Client) *Client {
+	return &Client{
 		url: credhubURL,
 		hc:  hc,
 	}
 }
 
-func (c *client) ListAllPaths() ([]string, error) {
+func (c *Client) ListAllPaths() ([]string, error) {
 	var retBody struct {
 		Paths []struct {
 			Path string `json:"path"`
@@ -57,7 +57,7 @@ func (c *client) ListAllPaths() ([]string, error) {
 	return paths, nil
 }
 
-func (c *client) GetByID(id string) (Credential, error) {
+func (c *Client) GetByID(id string) (Credential, error) {
 	var cred Credential
 
 	resp, err := c.hc.Get(c.url + "/api/v1/data/" + id)
@@ -78,15 +78,15 @@ func (c *client) GetByID(id string) (Credential, error) {
 	return cred, nil
 }
 
-func (c *client) GetAllByName(name string) ([]Credential, error) {
+func (c *Client) GetAllByName(name string) ([]Credential, error) {
 	return c.getByName(name, false, -1)
 }
 
-func (c *client) GetVersionsByName(name string, numVersions int) ([]Credential, error) {
+func (c *Client) GetVersionsByName(name string, numVersions int) ([]Credential, error) {
 	return c.getByName(name, false, numVersions)
 }
 
-func (c *client) GetLatestByName(name string) (Credential, error) {
+func (c *Client) GetLatestByName(name string) (Credential, error) {
 	creds, err := c.getByName(name, true, -1)
 	if err != nil {
 		return Credential{}, err
@@ -95,7 +95,7 @@ func (c *client) GetLatestByName(name string) (Credential, error) {
 	return creds[0], nil
 }
 
-func (c *client) Set(credential Credential) (Credential, error) {
+func (c *Client) Set(credential Credential) (Credential, error) {
 	buf, err := json.Marshal(credential)
 	if err != nil {
 		return Credential{}, err
@@ -121,7 +121,7 @@ func (c *client) Set(credential Credential) (Credential, error) {
 	return cred, err
 }
 
-func (c *client) Generate(name string, credentialType CredentialType, parameters map[string]interface{}) (Credential, error) {
+func (c *Client) Generate(name string, credentialType CredentialType, parameters map[string]interface{}) (Credential, error) {
 	reqBody := make(map[string]interface{})
 	reqBody["name"] = name
 	reqBody["type"] = credentialType
@@ -152,7 +152,7 @@ func (c *client) Generate(name string, credentialType CredentialType, parameters
 	return cred, err
 }
 
-func (c *client) Regenerate(name string) (Credential, error) {
+func (c *Client) Regenerate(name string) (Credential, error) {
 	reqBody := struct {
 		Name string `json:"name"`
 	}{
@@ -184,9 +184,9 @@ func (c *client) Regenerate(name string) (Credential, error) {
 	return cred, err
 }
 
-func (c *client) Delete(name string) error { return errNotImpl }
+func (c *Client) Delete(name string) error { return errNotImpl }
 
-func (c *client) FindByPath(path string) ([]Credential, error) {
+func (c *Client) FindByPath(path string) ([]Credential, error) {
 	var retBody struct {
 		Credentials []Credential `json:"credentials"`
 	}
@@ -205,7 +205,7 @@ func (c *client) FindByPath(path string) ([]Credential, error) {
 	return retBody.Credentials, err
 }
 
-func (c *client) FindByPartialName(partialName string) ([]Credential, error) {
+func (c *Client) FindByPartialName(partialName string) ([]Credential, error) {
 	var retBody struct {
 		Credentials []Credential `json:"credentials"`
 	}
@@ -221,19 +221,19 @@ func (c *client) FindByPartialName(partialName string) ([]Credential, error) {
 	return retBody.Credentials, err
 }
 
-func (c *client) GetPermissions(credentialName string) ([]Permission, error) {
+func (c *Client) GetPermissions(credentialName string) ([]Permission, error) {
 	return nil, errNotImpl
 }
 
-func (c *client) AddPermissions(credentialName string, newPerms []Permission) ([]Permission, error) {
+func (c *Client) AddPermissions(credentialName string, newPerms []Permission) ([]Permission, error) {
 	return nil, errNotImpl
 }
 
-func (c *client) DeletePermissions(credentialName, actorID string) error {
+func (c *Client) DeletePermissions(credentialName, actorID string) error {
 	return errNotImpl
 }
 
-func (c *client) getByName(name string, latest bool, numVersions int) ([]Credential, error) {
+func (c *Client) getByName(name string, latest bool, numVersions int) ([]Credential, error) {
 	var retBody struct {
 		Data []Credential `json:"data"`
 	}

@@ -1,4 +1,4 @@
-package auth
+package credhub
 
 import (
 	"crypto/tls"

@@ -1,4 +1,4 @@
-package client
+package credhub
 
 import (
 	"encoding/json"

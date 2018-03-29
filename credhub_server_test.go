@@ -1,4 +1,4 @@
-package testing
+package credhub_test
 
 import (
 	"encoding/json"
@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jghiloni/credhub-api/client"
+	"github.com/jghiloni/credhub-api"
 )
 
-type credentialFile map[string][]client.Credential
+type credentialFile map[string][]credhub.Credential
 
 // MockCredhubServer will create a mock server that is useful for unit testing
-func MockCredhubServer() *httptest.Server {
+func mockCredhubServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/info" {
 			infoHandler(w, r)
@@ -44,7 +44,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	ret := make(map[string]interface{})
 	key := "data"
 
-	var creds []client.Credential
+	var creds []credhub.Credential
 	var err error
 	switch r.URL.Path {
 	case "/some-url":
@@ -114,11 +114,11 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	case "/api/v1/data":
 		var generateBody struct {
 			Name   string                 `json:"name"`
-			Type   client.CredentialType  `json:"type"`
+			Type   credhub.CredentialType `json:"type"`
 			Params map[string]interface{} `json:"parameters"`
 		}
 
-		var cred client.Credential
+		var cred credhub.Credential
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &cred); err != nil {
 			w.WriteHeader(400)
@@ -148,14 +148,14 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 			Name string `json:"name"`
 		}
 
-		var cred client.Credential
+		var cred credhub.Credential
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &body); err != nil {
 			w.WriteHeader(400)
 		}
 
 		cred.Name = body.Name
-		cred.Type = client.Password
+		cred.Type = credhub.Password
 		cred.Value = "P$<MNBVCXZ;lkjhgfdsa0987654321"
 		cred.Created = time.Now().Format(time.RFC3339)
 		buf, e := json.Marshal(cred)
@@ -185,14 +185,14 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(out)
 }
 
-func returnFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]client.Credential, error) {
+func returnFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]credhub.Credential, error) {
 	filePath := path.Join("fixtures", query, value+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var creds []client.Credential
+	var creds []credhub.Credential
 
 	params := r.URL.Query()
 	name := params.Get("name")
