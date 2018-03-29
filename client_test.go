@@ -191,6 +191,17 @@ func TestCredhubClient(t *testing.T) {
 			Expect(newCred.Created).To(Not(BeEmpty()))
 		}
 
+		deleteFoundCredential := func() {
+			err := chClient.Delete("/some-cred")
+			Expect(err).To(Not(HaveOccurred()))
+		}
+
+		deleteNotFoundCredential := func() {
+			err := chClient.Delete("/some-other-cred")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(BeEquivalentTo("expected return code 204, got 404"))
+		}
+
 		it.Before(func() {
 			RegisterTestingT(t)
 			server = mockCredhubServer()
@@ -302,6 +313,11 @@ func TestCredhubClient(t *testing.T) {
 						Expect(cred.Name).To(ContainSubstring("password"))
 					}
 				})
+			})
+
+			when("Testing Delete", func() {
+				it("should delete a credential that it can find", deleteFoundCredential)
+				it("should fail to delete a credential that it cannot find", deleteNotFoundCredential)
 			})
 		})
 	}, spec.Report(report.Terminal{}))

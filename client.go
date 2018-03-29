@@ -184,7 +184,25 @@ func (c *Client) Regenerate(name string) (Credential, error) {
 	return cred, err
 }
 
-func (c *Client) Delete(name string) error { return errNotImpl }
+// Delete deletes
+func (c *Client) Delete(name string) error {
+	chURL := c.url + "/api/v1/data?name=" + name
+	req, err := http.NewRequest("DELETE", chURL, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 204 {
+		return fmt.Errorf("expected return code 204, got %d", resp.StatusCode)
+	}
+
+	return nil
+}
 
 func (c *Client) FindByPath(path string) ([]Credential, error) {
 	var retBody struct {

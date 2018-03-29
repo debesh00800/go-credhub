@@ -36,6 +36,8 @@ func mockCredhubServer() *httptest.Server {
 			getHandler(w, r)
 		case "post":
 			postHandler(w, r)
+		case "delete":
+			deleteHandler(w, r)
 		}
 	}))
 }
@@ -164,6 +166,21 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Write(buf)
+	}
+}
+
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/api/v1/data":
+		name := r.URL.Query().Get("name")
+		if name == "/some-cred" {
+			w.WriteHeader(204)
+			return
+		}
+
+		fallthrough
+	default:
+		w.WriteHeader(404)
 	}
 }
 
