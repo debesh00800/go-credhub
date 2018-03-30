@@ -244,10 +244,6 @@ func (c *Client) FindByPath(path string) ([]Credential, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode == 404 {
-		return nil, errors.New("path not found")
-	}
-
 	buf, _ := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(buf, &retBody)
 	return retBody.Credentials, err

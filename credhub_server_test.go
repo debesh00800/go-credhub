@@ -67,6 +67,10 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			creds, err = returnFromFile("bypath", path, key, w, r)
 		case name != "":
 			creds, err = returnFromFile("byname", name, key, w, r)
+			if os.IsNotExist(err) {
+				w.WriteHeader(404)
+				return
+			}
 		case paths == "true":
 			// creds, err = returnFromFile("", "allpaths", w, r)
 			directWriteFile("fixtures/allpaths.json", w, r)

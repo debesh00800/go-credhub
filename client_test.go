@@ -18,7 +18,6 @@ import (
 
 func TestCredhubClient(t *testing.T) {
 	spec.Run(t, "Credhub Client", func(t *testing.T, when spec.G, it spec.S) {
-		//		var chClient *credhub.Client
 		server := mockCredhubServer()
 
 		it.Before(func() {
@@ -28,6 +27,32 @@ func TestCredhubClient(t *testing.T) {
 		it.After(func() {
 			server.Close()
 		})
+
+		getClient := func(ci, cs string, skip bool) *credhub.Client {
+			endpoint, _ := credhub.UAAEndpoint(server.URL, true)
+			var t *http.Transport
+			if skip {
+				t = &http.Transport{
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				}
+			} else {
+				certs, _ := x509.SystemCertPool()
+				certs.AddCert(server.Certificate())
+				t = &http.Transport{
+					TLSClientConfig: &tls.Config{RootCAs: certs},
+				}
+			}
+			sslcli := &http.Client{Transport: t}
+
+			ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
+			cfg := &clientcredentials.Config{
+				ClientID:     ci,
+				ClientSecret: cs,
+				TokenURL:     endpoint.TokenURL,
+				Scopes:       []string{"credhub.read", "credhub.write"},
+			}
+			return credhub.New(server.URL, cfg.Client(ctx))
+		}
 
 		findByGoodPath := func(chClient *credhub.Client) func() {
 			return func() {
@@ -381,32 +406,6 @@ func TestCredhubClient(t *testing.T) {
 					it("should fail to delete a credential that it cannot find", deleteNotFoundCredential(chClient))
 				})
 			}
-		}
-
-		getClient := func(ci, cs string, skip bool) *credhub.Client {
-			endpoint, _ := credhub.UAAEndpoint(server.URL, true)
-			var t *http.Transport
-			if skip {
-				t = &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}
-			} else {
-				certs, _ := x509.SystemCertPool()
-				certs.AddCert(server.Certificate())
-				t = &http.Transport{
-					TLSClientConfig: &tls.Config{RootCAs: certs},
-				}
-			}
-			sslcli := &http.Client{Transport: t}
-
-			ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
-			cfg := &clientcredentials.Config{
-				ClientID:     ci,
-				ClientSecret: cs,
-				TokenURL:     endpoint.TokenURL,
-				Scopes:       []string{"credhub.read", "credhub.write"},
-			}
-			return credhub.New(server.URL, cfg.Client(ctx))
 		}
 
 		when("Running with UAA Authorization", func() {
