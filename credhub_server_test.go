@@ -73,7 +73,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		case paths == "true":
 			// creds, err = returnFromFile("", "allpaths", w, r)
-			directWriteFile("fixtures/allpaths.json", w, r)
+			directWriteFile("testdata/allpaths.json", w, r)
 			return
 		case nameLike != "":
 			key = "credentials"
@@ -94,7 +94,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "/api/v1/data/1234":
-		directWriteFile("fixtures/byid/1234.json", w, r)
+		directWriteFile("testdata/byid/1234.json", w, r)
 		return
 	default:
 		w.WriteHeader(404)
@@ -271,7 +271,7 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func returnFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]credhub.Credential, error) {
-	filePath := path.Join("fixtures", query, value+".json")
+	filePath := path.Join("testdata", query, value+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
