@@ -268,7 +268,27 @@ func (c *Client) FindByPartialName(partialName string) ([]Credential, error) {
 
 // GetPermissions returns the permissions of a credential.
 func (c *Client) GetPermissions(credentialName string) ([]Permission, error) {
-	return nil, errNotImpl
+	params := make(url.Values)
+	params.Add("credential_name", credentialName)
+
+	resp, err := c.hc.Get(c.url + "/api/v1/permissions?" + params.Encode())
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == 404 {
+		return nil, errors.New("credential not found")
+	}
+
+	retBody := struct {
+		CN          string       `json:"credential_name"`
+		Permissions []Permission `json:"permissions"`
+	}{}
+
+	marshaller := json.NewDecoder(resp.Body)
+
+	err = marshaller.Decode(&retBody)
+	return retBody.Permissions, err
 }
 
 // AddPermissions adds permissions to a credential

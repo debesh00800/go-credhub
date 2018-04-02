@@ -64,20 +64,20 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case path != "":
 			key = "credentials"
-			creds, err = returnFromFile("bypath", path, key, w, r)
+			creds, err = returnCredentialsFromFile("bypath", path, key, w, r)
 		case name != "":
-			creds, err = returnFromFile("byname", name, key, w, r)
+			creds, err = returnCredentialsFromFile("byname", name, key, w, r)
 			if os.IsNotExist(err) {
 				w.WriteHeader(404)
 				return
 			}
 		case paths == "true":
 			// creds, err = returnFromFile("", "allpaths", w, r)
-			directWriteFile("testdata/allpaths.json", w, r)
+			directWriteFile("testdata/credentials/allpaths.json", w, r)
 			return
 		case nameLike != "":
 			key = "credentials"
-			creds, err = returnFromFile("bypath", "/concourse/common", key, w, r)
+			creds, err = returnCredentialsFromFile("bypath", "/concourse/common", key, w, r)
 			idxs := make([]int, 0, len(creds))
 			for idx, cred := range creds {
 				if !strings.Contains(strings.ToLower(cred.Name), strings.ToLower(nameLike)) {
@@ -93,8 +93,12 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(400)
 			return
 		}
+	case "/api/v1/permissions":
+		name := r.FormValue("credential_name")
+		directWriteFile(path.Join("testdata/permissions", name+".json"), w, r)
+		return
 	case "/api/v1/data/1234":
-		directWriteFile("testdata/byid/1234.json", w, r)
+		directWriteFile("testdata/credentials/byid/1234.json", w, r)
 		return
 	default:
 		w.WriteHeader(404)
@@ -270,8 +274,27 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(out)
 }
 
-func returnFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]credhub.Credential, error) {
-	filePath := path.Join("testdata", query, value+".json")
+func returnPermissionsFromFile(credentialName string) ([]credhub.Permission, error) {
+	filePath := path.Join("testdata/permissions", credentialName+".json")
+	buf, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	retBody := struct {
+		CN          string               `json:"credential_name"`
+		Permissions []credhub.Permission `json:"permissions"`
+	}{}
+
+	if err = json.Unmarshal(buf, &retBody); err != nil {
+		return nil, err
+	}
+
+	return retBody.Permissions, nil
+}
+
+func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]credhub.Credential, error) {
+	filePath := path.Join("testdata/credentials", query, value+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -324,6 +347,7 @@ func directWriteFile(path string, w http.ResponseWriter, r *http.Request) {
 		return
 	} else if err != nil {
 		w.WriteHeader(500)
+		return
 	}
 
 	w.Write(buf)

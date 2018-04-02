@@ -323,6 +323,19 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
+		getPermissions := func(chClient *credhub.Client) func() {
+			return func() {
+				perms, err := chClient.GetPermissions("/credential-with-permissions")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(perms).To(HaveLen(3))
+
+				perms, err = chClient.GetPermissions("/non-existent")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(BeEquivalentTo("credential not found"))
+				Expect(perms).To(BeNil())
+			}
+		}
+
 		runTests := func(chClient *credhub.Client) func() {
 			return func() {
 				when("Testing Find By Path", func() {
@@ -404,6 +417,10 @@ func TestCredhubClient(t *testing.T) {
 				when("Testing Delete", func() {
 					it("should delete a credential that it can find", deleteFoundCredential(chClient))
 					it("should fail to delete a credential that it cannot find", deleteNotFoundCredential(chClient))
+				})
+
+				when("Testing Get Permissions", func() {
+					it("should find permissions for an existing credential", getPermissions(chClient))
 				})
 			}
 		}
