@@ -322,17 +322,9 @@ func (c *Client) AddPermissions(credentialName string, newPerms []Permission) ([
 	}
 	defer resp.Body.Close()
 
-	fmt.Println(resp.StatusCode)
-
-	//
 	var response permbody
 
-	respbytes, err1 := ioutil.ReadAll(resp.Body)
-	if err1 != nil {
-		return nil, err1
-	}
-	fmt.Printf("Response Body is [%s]", string(respbytes))
-	decoder := json.NewDecoder(bytes.NewBuffer(respbytes))
+	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&response)
 	if err != nil {
 		return nil, err

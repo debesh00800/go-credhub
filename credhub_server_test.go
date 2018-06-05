@@ -231,7 +231,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			var existing permbody
-			if err := json.Unmarshal(buf, &existing); err != nil {
+			if err = json.Unmarshal(buf, &existing); err != nil {
 				w.WriteHeader(500)
 				return
 			}
