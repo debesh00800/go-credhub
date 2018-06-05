@@ -2,7 +2,9 @@ package credhub_test
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -95,6 +97,21 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "/api/v1/permissions":
 		name := r.FormValue("credential_name")
+
+		if name == "/add-permission-credential" {
+			fileName := "testdata/permissions/add-permissions/cred.json"
+			if _, err = os.Stat(fileName); os.IsNotExist(err) {
+				err = copyFile("testdata/permissions/add-permissions/base.json", fileName)
+			}
+
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			name = "/add-permissions/cred"
+		}
+
 		directWriteFile(path.Join("testdata/permissions", name+".json"), w, r)
 		return
 	case "/api/v1/data/1234":
@@ -140,12 +157,14 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		if cred.Value == nil {
 			if err := json.Unmarshal(buf, &generateBody); err != nil {
 				w.WriteHeader(400)
+				return
 			} else if generateBody.Params != nil {
 				cred.Name = generateBody.Name
 				cred.Type = generateBody.Type
 				cred.Value = "1234567890asdfghjkl;ZXCVBNM<$P"
 			} else {
 				w.WriteHeader(400)
+				return
 			}
 		}
 		t := time.Now()
@@ -153,6 +172,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		buf, e := json.Marshal(cred)
 		if e != nil {
 			w.WriteHeader(500)
+			return
 		}
 
 		w.Write(buf)
@@ -165,6 +185,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &body); err != nil {
 			w.WriteHeader(400)
+			return
 		}
 
 		cred.Name = body.Name
@@ -177,6 +198,58 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Write(buf)
+	case "/api/v1/permissions":
+		type permbody struct {
+			Name        string               `json:"credential_name"`
+			Permissions []credhub.Permission `json:"permissions"`
+		}
+
+		var body permbody
+
+		buf, _ := ioutil.ReadAll(r.Body)
+		if err := json.Unmarshal(buf, &body); err != nil {
+			w.WriteHeader(400)
+			return
+		}
+
+		if body.Name == "/add-permission-credential" {
+			fp, err := os.OpenFile("testdata/permissions/add-permissions/cred.json", os.O_RDWR, 0644)
+			if os.IsNotExist(err) {
+				w.WriteHeader(404)
+				return
+			} else if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+			defer fp.Close()
+
+			var buf []byte
+			buf, err = ioutil.ReadAll(fp)
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			var existing permbody
+			if err := json.Unmarshal(buf, &existing); err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			existing.Permissions = append(existing.Permissions, body.Permissions...)
+			outbuf, err := json.Marshal(existing)
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			fp.WriteAt(outbuf, 0)
+			w.Write(outbuf)
+			return
+		} else {
+			w.WriteHeader(404)
+			return
+		}
 	}
 }
 
@@ -341,6 +414,7 @@ func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, 
 }
 
 func directWriteFile(path string, w http.ResponseWriter, r *http.Request) {
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.LUTC)
 	buf, err := ioutil.ReadFile(path)
 	if os.IsNotExist(err) {
 		w.WriteHeader(404)
@@ -351,4 +425,30 @@ func directWriteFile(path string, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(buf)
+}
+
+func copyFile(src, dst string) error {
+	var in, out *os.File
+	var err error
+	if in, err = os.Open(src); err != nil {
+		return err
+	}
+	// defer in.Close()
+	defer func() {
+		in.Close()
+	}()
+
+	if out, err = os.Create(dst); err != nil {
+		return err
+	}
+	//defer out.Close()
+	defer func() {
+		out.Close()
+	}()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+
+	return nil
 }

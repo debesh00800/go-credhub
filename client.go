@@ -293,7 +293,52 @@ func (c *Client) GetPermissions(credentialName string) ([]Permission, error) {
 
 // AddPermissions adds permissions to a credential
 func (c *Client) AddPermissions(credentialName string, newPerms []Permission) ([]Permission, error) {
-	return nil, errNotImpl
+	type permbody struct {
+		Name        string       `json:"credential_name"`
+		Permissions []Permission `json:"permissions"`
+	}
+
+	request := permbody{
+		Name:        credentialName,
+		Permissions: newPerms,
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", c.url+"/api/v1/permissions", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	fmt.Println(resp.StatusCode)
+
+	//
+	var response permbody
+
+	respbytes, err1 := ioutil.ReadAll(resp.Body)
+	if err1 != nil {
+		return nil, err1
+	}
+	fmt.Printf("Response Body is [%s]", string(respbytes))
+	decoder := json.NewDecoder(bytes.NewBuffer(respbytes))
+	err = decoder.Decode(&response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Permissions, nil
 }
 
 // DeletePermissions deletes permissions from a credential

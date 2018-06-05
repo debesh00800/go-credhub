@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
+	"os"
 	"testing"
 
 	credhub "github.com/jghiloni/credhub-api"
@@ -42,6 +43,8 @@ func TestCredhubClient(t *testing.T) {
 					TLSClientConfig: &tls.Config{RootCAs: certs},
 				}
 			}
+
+			t.Proxy = http.ProxyFromEnvironment
 			sslcli := &http.Client{Transport: t}
 
 			ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
@@ -336,6 +339,24 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
+		addPermissions := func(chClient *credhub.Client) func() {
+			return func() {
+				perms, err := chClient.GetPermissions("/add-permission-credential")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(perms).To(HaveLen(0))
+
+				perms = append(perms, credhub.Permission{
+					Actor:      "uaa-user:1234",
+					Operations: []string{"read", "write", "delete"},
+				})
+
+				respPerms, err := chClient.AddPermissions("/add-permission-credential", perms)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(respPerms).To(HaveLen(1))
+				Expect(respPerms[0].Actor).To(Equal("uaa-user:1234"))
+			}
+		}
+
 		runTests := func(chClient *credhub.Client) func() {
 			return func() {
 				when("Testing Find By Path", func() {
@@ -421,6 +442,15 @@ func TestCredhubClient(t *testing.T) {
 
 				when("Testing Get Permissions", func() {
 					it("should find permissions for an existing credential", getPermissions(chClient))
+				})
+
+				when("Testing Add Permissions", func() {
+					it.After(func() {
+						err := os.Remove("testdata/permissions/add-permissions/cred.json")
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					it("should allow permissions to be added", addPermissions(chClient))
 				})
 			}
 		}
