@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -322,11 +321,78 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(204)
 			return
 		}
+	case "/api/v1/permissions":
+		var err error
 
-		fallthrough
-	default:
-		w.WriteHeader(404)
+		name := r.URL.Query().Get("credential_name")
+		actor := r.URL.Query().Get("actor")
+
+		if name == "/add-permission-credential" {
+			fileName := "testdata/permissions/add-permissions/cred.json"
+			if _, err = os.Stat(fileName); os.IsNotExist(err) {
+				err = copyFile("testdata/permissions/add-permissions/base.json", fileName)
+			}
+
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			fp, err := os.OpenFile("testdata/permissions/add-permissions/cred.json", os.O_RDWR, 0644)
+			if os.IsNotExist(err) {
+				w.WriteHeader(404)
+				return
+			} else if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+			defer fp.Close()
+
+			buf, err := ioutil.ReadAll(fp)
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			retBody := struct {
+				Name        string               `json:"credential_name"`
+				Permissions []credhub.Permission `json:"permissions"`
+			}{}
+
+			if err = json.Unmarshal(buf, &retBody); err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			newPerms := make([]credhub.Permission, 0, len(retBody.Permissions))
+			for i := range retBody.Permissions {
+				if strings.TrimSpace(retBody.Permissions[i].Actor) != strings.TrimSpace(actor) {
+					newPerms = append(newPerms, retBody.Permissions[i])
+				}
+			}
+
+			retBody.Permissions = newPerms
+
+			output, err := json.Marshal(retBody)
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
+
+			fp.Seek(0, 0)
+			fp.Truncate(int64(len(output)))
+			fp.WriteAt(output, 0)
+
+			w.WriteHeader(204)
+			return
+		} else {
+			w.WriteHeader(404)
+			return
+		}
 	}
+
+	w.WriteHeader(404)
+	return
 }
 
 func infoHandler(w http.ResponseWriter, r *http.Request) {
@@ -414,7 +480,6 @@ func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, 
 }
 
 func directWriteFile(path string, w http.ResponseWriter, r *http.Request) {
-	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.LUTC)
 	buf, err := ioutil.ReadFile(path)
 	if os.IsNotExist(err) {
 		w.WriteHeader(404)

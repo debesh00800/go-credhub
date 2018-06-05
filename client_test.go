@@ -339,9 +339,12 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		addPermissions := func(chClient *credhub.Client) func() {
+		modifyPermissions := func(chClient *credhub.Client) func() {
 			return func() {
-				perms, err := chClient.GetPermissions("/add-permission-credential")
+				var perms []credhub.Permission
+				var err error
+
+				perms, err = chClient.GetPermissions("/add-permission-credential")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(perms).To(HaveLen(0))
 
@@ -354,6 +357,19 @@ func TestCredhubClient(t *testing.T) {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(respPerms).To(HaveLen(1))
 				Expect(respPerms[0].Actor).To(Equal("uaa-user:1234"))
+
+				err = chClient.DeletePermissions("/add-permission-credential", "some-non-existent-actor")
+				Expect(err).NotTo(HaveOccurred())
+				perms, err = chClient.GetPermissions("/add-permission-credential")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(perms).To(HaveLen(1))
+				Expect(perms[0].Actor).To(Equal("uaa-user:1234"))
+
+				err = chClient.DeletePermissions("/add-permission-credential", "uaa-user:1234")
+				Expect(err).NotTo(HaveOccurred())
+				perms, err = chClient.GetPermissions("/add-permission-credential")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(perms).To(HaveLen(0))
 			}
 		}
 
@@ -444,13 +460,13 @@ func TestCredhubClient(t *testing.T) {
 					it("should find permissions for an existing credential", getPermissions(chClient))
 				})
 
-				when("Testing Add Permissions", func() {
+				when("Testing Modify Permissions", func() {
 					it.After(func() {
 						err := os.Remove("testdata/permissions/add-permissions/cred.json")
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					it("should allow permissions to be added", addPermissions(chClient))
+					it("should allow permissions to be added and deleted", modifyPermissions(chClient))
 				})
 			}
 		}
