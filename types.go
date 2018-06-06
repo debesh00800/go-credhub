@@ -69,37 +69,38 @@ type Credential struct {
 }
 
 // Permission represents the operations an actor is allowed to perform on a
-// credential
+// credential. See https://github.com/cloudfoundry-incubator/credhub/blob/master/docs/authentication-identities.md for
+// more information on actor identities
 type Permission struct {
 	Actor      string      `json:"actor"`
 	Operations []Operation `json:"operations"`
 }
 
-// UserValueType is what a `user` type credential will have. Use UserValue() to
-// get this from a `user` type Credential
+// UserValueType is what a user type credential will have. Use UserValue() to
+// get this from a user type Credential
 type UserValueType struct {
 	Username     string `json:"username"`
 	Password     string `json:"password"`
 	PasswordHash string `json:"password_hash"`
 }
 
-// RSAValueType is what a `rsa` type credential will have. Use RSAValue() to
-// get this from a `rsa` type Credential
+// RSAValueType is what a rsa type credential will have. Use RSAValue() to
+// get this from a rsa type Credential
 type RSAValueType struct {
 	PublicKey  string `json:"public_key"`
 	PrivateKey string `json:"private_key"`
 }
 
-// SSHValueType is what a `ssh` type credential will have. Use SSHValue() to
-// get this from a `ssh` type Credential
+// SSHValueType is what a ssh type credential will have. Use SSHValue() to
+// get this from a ssh type Credential
 type SSHValueType struct {
 	PublicKey            string `json:"public_key"`
 	PrivateKey           string `json:"private_key"`
 	PublicKeyFingerprint string `json:"public_key_fingerprint"`
 }
 
-// CertificateValueType is what a `certificate` type credential will have. Use
-// CertificateValue() to get this from a `certificate` type credential.
+// CertificateValueType is what a certificate type credential will have. Use
+// CertificateValue() to get this from a certificate type credential.
 type CertificateValueType struct {
 	CA          string `json:"ca"`
 	PrivateKey  string `json:"private_key"`
