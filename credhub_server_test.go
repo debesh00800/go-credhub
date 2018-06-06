@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/jghiloni/credhub-api"
+	. "github.com/cloudfoundry-community/go-credhub"
 	uuid "github.com/nu7hatch/gouuid"
 )
 
