@@ -10,13 +10,14 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
+
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
-	credhub "github.com/jghiloni/credhub-api"
+	. "github.com/jghiloni/credhub-api"
 	. "github.com/onsi/gomega"
-	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 )
 
 func TestOAuthClient(t *testing.T) {
@@ -26,7 +27,7 @@ func TestOAuthClient(t *testing.T) {
 		serverCert := cs.Certificate()
 
 		getClient := func(cu, ci, cs string, skip bool) (*http.Client, error) {
-			endpoint, err := credhub.UAAEndpoint(cu, true)
+			endpoint, err := UAAEndpoint(cu, true)
 			if err != nil {
 				return nil, err
 			}
@@ -51,7 +52,7 @@ func TestOAuthClient(t *testing.T) {
 				ClientID:     ci,
 				ClientSecret: cs,
 				TokenURL:     endpoint.TokenURL,
-				Scopes:       []string{"credhub.read", "credhub.write"},
+				Scopes:       []string{"read", "write"},
 			}
 
 			return cfg.Client(ctx), nil

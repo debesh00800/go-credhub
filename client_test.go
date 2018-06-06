@@ -9,14 +9,15 @@ import (
 	"os"
 	"testing"
 
-	credhub "github.com/jghiloni/credhub-api"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/matchers"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+
+	. "github.com/jghiloni/credhub-api"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/matchers"
 )
 
 func TestCredhubClient(t *testing.T) {
@@ -31,8 +32,8 @@ func TestCredhubClient(t *testing.T) {
 			server.Close()
 		})
 
-		getClient := func(ci, cs string, skip bool) *credhub.Client {
-			endpoint, _ := credhub.UAAEndpoint(server.URL, true)
+		getClient := func(ci, cs string, skip bool) *Client {
+			endpoint, _ := UAAEndpoint(server.URL, true)
 			var t *http.Transport
 			if skip {
 				t = &http.Transport{
@@ -54,12 +55,12 @@ func TestCredhubClient(t *testing.T) {
 				ClientID:     ci,
 				ClientSecret: cs,
 				TokenURL:     endpoint.TokenURL,
-				Scopes:       []string{"credhub.read", "credhub.write"},
+				Scopes:       []string{"read", "write"},
 			}
-			return credhub.New(server.URL, cfg.Client(ctx))
+			return New(server.URL, cfg.Client(ctx))
 		}
 
-		findByGoodPath := func(chClient *credhub.Client) func() {
+		findByGoodPath := func(chClient *Client) func() {
 			return func() {
 				creds, err := chClient.FindByPath("/concourse/common")
 				Expect(err).To(BeNil())
@@ -67,7 +68,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		findByBadPath := func(chClient *credhub.Client) func() {
+		findByBadPath := func(chClient *Client) func() {
 			return func() {
 				creds, err := chClient.FindByPath("/concourse/uncommon")
 				Expect(err).To(HaveOccurred())
@@ -75,7 +76,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		valueByNameTests := func(chClient *credhub.Client, latest bool, num int) func() {
+		valueByNameTests := func(chClient *Client, latest bool, num int) func() {
 			if latest {
 				return func() {
 					cred, err := chClient.GetLatestByName("/concourse/common/sample-value")
@@ -97,7 +98,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		passwordByNameTests := func(chClient *credhub.Client, latest bool, num int) func() {
+		passwordByNameTests := func(chClient *Client, latest bool, num int) func() {
 			if latest {
 				return func() {
 					cred, err := chClient.GetLatestByName("/concourse/common/sample-password")
@@ -120,7 +121,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		jsonByNameTests := func(chClient *credhub.Client, latest bool, num int) func() {
+		jsonByNameTests := func(chClient *Client, latest bool, num int) func() {
 			if latest {
 				return func() {
 					cred, err := chClient.GetLatestByName("/concourse/common/sample-json")
@@ -154,7 +155,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		getUserByName := func(chClient *credhub.Client) func() {
+		getUserByName := func(chClient *Client) func() {
 			return func() {
 				creds, err := chClient.GetAllByName("/concourse/common/sample-user")
 				Expect(err).To(Not(HaveOccurred()))
@@ -162,92 +163,92 @@ func TestCredhubClient(t *testing.T) {
 
 				cred := creds[0]
 
-				var val credhub.UserValueType
-				val, err = credhub.UserValue(cred)
+				var val UserValueType
+				val, err = UserValue(cred)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(val.Username).To(Equal("me"))
 			}
 		}
 
-		getSSHByName := func(chClient *credhub.Client) func() {
+		getSSHByName := func(chClient *Client) func() {
 			return func() {
 				creds, err := chClient.GetAllByName("/concourse/common/sample-ssh")
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(len(creds)).To(Equal(1))
 
 				cred := creds[0]
-				var val credhub.SSHValueType
-				val, err = credhub.SSHValue(cred)
+				var val SSHValueType
+				val, err = SSHValue(cred)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(val.PublicKey).To(HavePrefix("ssh-rsa"))
 			}
 		}
 
-		getRSAByName := func(chClient *credhub.Client) func() {
+		getRSAByName := func(chClient *Client) func() {
 			return func() {
 				creds, err := chClient.GetAllByName("/concourse/common/sample-rsa")
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(len(creds)).To(Equal(1))
 
 				cred := creds[0]
-				var val credhub.RSAValueType
-				val, err = credhub.RSAValue(cred)
+				var val RSAValueType
+				val, err = RSAValue(cred)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(val.PrivateKey).To(HavePrefix("-----BEGIN PRIVATE KEY-----"))
 			}
 		}
 
-		getNonexistentName := func(chClient *credhub.Client) func() {
+		getNonexistentName := func(chClient *Client) func() {
 			return func() {
 				_, err := chClient.GetAllByName("/concourse/common/not-real")
 				Expect(err).To(HaveOccurred())
 			}
 		}
 
-		getCertificateByName := func(chClient *credhub.Client) func() {
+		getCertificateByName := func(chClient *Client) func() {
 			return func() {
 				creds, err := chClient.GetAllByName("/concourse/common/sample-certificate")
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(len(creds)).To(Equal(1))
 
 				cred := creds[0]
-				var val credhub.CertificateValueType
-				val, err = credhub.CertificateValue(cred)
+				var val CertificateValueType
+				val, err = CertificateValue(cred)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(val.Certificate).To(HavePrefix("-----BEGIN CERTIFICATE-----"))
 			}
 		}
 
-		badConversionValueTests := func(chClient *credhub.Client) func() {
+		badConversionValueTests := func(chClient *Client) func() {
 			return func() {
 				var (
-					cred credhub.Credential
+					cred Credential
 					err  error
 				)
 
 				cred, err = chClient.GetLatestByName("/concourse/common/sample-rsa")
 				Expect(err).NotTo(HaveOccurred())
-				_, err = credhub.SSHValue(cred)
+				_, err = SSHValue(cred)
 				Expect(err).To(HaveOccurred())
 
 				cred, err = chClient.GetLatestByName("/concourse/common/sample-ssh")
 				Expect(err).NotTo(HaveOccurred())
-				_, err = credhub.UserValue(cred)
+				_, err = UserValue(cred)
 				Expect(err).To(HaveOccurred())
 
 				cred, err = chClient.GetLatestByName("/concourse/common/sample-user")
 				Expect(err).NotTo(HaveOccurred())
-				_, err = credhub.CertificateValue(cred)
+				_, err = CertificateValue(cred)
 				Expect(err).To(HaveOccurred())
 
 				cred, err = chClient.GetLatestByName("/concourse/common/sample-certificate")
 				Expect(err).NotTo(HaveOccurred())
-				_, err = credhub.RSAValue(cred)
+				_, err = RSAValue(cred)
 				Expect(err).To(HaveOccurred())
 			}
 		}
 
-		listAllByPath := func(chClient *credhub.Client) func() {
+		listAllByPath := func(chClient *Client) func() {
 			return func() {
 				paths, err := chClient.ListAllPaths()
 				Expect(err).To(Not(HaveOccurred()))
@@ -255,7 +256,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		getById := func(chClient *credhub.Client) func() {
+		getById := func(chClient *Client) func() {
 			return func() {
 				cred, err := chClient.GetByID("1234")
 				Expect(err).To(Not(HaveOccurred()))
@@ -267,93 +268,93 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		setOverwriteCredential := func(chClient *credhub.Client) func() {
+		setOverwriteCredential := func(chClient *Client) func() {
 			return func() {
-				cred := credhub.Credential{
+				cred := Credential{
 					Name: "/sample-set",
 					Type: "user",
-					Value: credhub.UserValueType{
+					Value: UserValueType{
 						Username:     "me",
 						Password:     "super-secret",
 						PasswordHash: "somestring",
 					},
 				}
 
-				newCred, err := chClient.Set(cred, credhub.Overwrite, nil)
+				newCred, err := chClient.Set(cred, Overwrite, nil)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(newCred.Created).To(Not(BeEmpty()))
 				Expect(newCred.ID).To(Not(BeEmpty()))
 			}
 		}
 
-		setNoOverwriteCredential := func(chClient *credhub.Client) func() {
+		setNoOverwriteCredential := func(chClient *Client) func() {
 			return func() {
-				cred := credhub.Credential{
+				cred := Credential{
 					Name: "/sample-set",
 					Type: "user",
-					Value: credhub.UserValueType{
+					Value: UserValueType{
 						Username:     "me",
 						Password:     "super-secret",
 						PasswordHash: "somestring",
 					},
 				}
 
-				newCred, err := chClient.Set(cred, credhub.NoOverwrite, nil)
+				newCred, err := chClient.Set(cred, NoOverwrite, nil)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(newCred.Created).To(Not(BeEmpty()))
-				v, err := credhub.UserValue(newCred)
+				v, err := UserValue(newCred)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(v.Password).To(BeEquivalentTo("old"))
 				Expect(newCred.ID).To(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8"))
 			}
 		}
 
-		setConvergeCredentialWithoutDifference := func(chClient *credhub.Client) func() {
+		setConvergeCredentialWithoutDifference := func(chClient *Client) func() {
 			return func() {
-				cred := credhub.Credential{
+				cred := Credential{
 					Name: "/sample-set",
 					Type: "user",
-					Value: credhub.UserValueType{
+					Value: UserValueType{
 						Username:     "me",
 						Password:     "super-secret",
 						PasswordHash: "somestring",
 					},
 				}
 
-				newCred, err := chClient.Set(cred, credhub.Converge, nil)
+				newCred, err := chClient.Set(cred, Converge, nil)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(newCred.Created).To(Not(BeEmpty()))
 				Expect(newCred.ID).To(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8"))
 			}
 		}
 
-		setConvergeCredentialWithDifference := func(chClient *credhub.Client) func() {
+		setConvergeCredentialWithDifference := func(chClient *Client) func() {
 			return func() {
-				cred := credhub.Credential{
+				cred := Credential{
 					Name: "/sample-set",
 					Type: "user",
-					Value: credhub.UserValueType{
+					Value: UserValueType{
 						Username:     "me",
 						Password:     "new-super-secret",
 						PasswordHash: "somestring",
 					},
 				}
 
-				newCred, err := chClient.Set(cred, credhub.Converge, nil)
+				newCred, err := chClient.Set(cred, Converge, nil)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(newCred.Created).To(Not(BeEmpty()))
 				Expect(newCred.ID).To(Not(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8")))
 			}
 		}
 
-		deleteFoundCredential := func(chClient *credhub.Client) func() {
+		deleteFoundCredential := func(chClient *Client) func() {
 			return func() {
 				err := chClient.Delete("/some-cred")
 				Expect(err).To(Not(HaveOccurred()))
 			}
 		}
 
-		deleteNotFoundCredential := func(chClient *credhub.Client) func() {
+		deleteNotFoundCredential := func(chClient *Client) func() {
 			return func() {
 				err := chClient.Delete("/some-other-cred")
 				Expect(err).To(HaveOccurred())
@@ -361,7 +362,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		getPermissions := func(chClient *credhub.Client) func() {
+		getPermissions := func(chClient *Client) func() {
 			return func() {
 				perms, err := chClient.GetPermissions("/credential-with-permissions")
 				Expect(err).NotTo(HaveOccurred())
@@ -374,18 +375,18 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		modifyPermissions := func(chClient *credhub.Client) func() {
+		modifyPermissions := func(chClient *Client) func() {
 			return func() {
-				var perms []credhub.Permission
+				var perms []Permission
 				var err error
 
 				perms, err = chClient.GetPermissions("/add-permission-credential")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(perms).To(HaveLen(0))
 
-				perms = append(perms, credhub.Permission{
+				perms = append(perms, Permission{
 					Actor:      "uaa-user:1234",
-					Operations: []credhub.Operation{"read", "write", "delete"},
+					Operations: []Operation{"read", "write", "delete"},
 				})
 
 				respPerms, err := chClient.AddPermissions("/add-permission-credential", perms)
@@ -408,7 +409,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		interpolate := func(chClient *credhub.Client) func() {
+		interpolate := func(chClient *Client) func() {
 			return func() {
 				vcapServices := `
 				{
@@ -448,7 +449,7 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
-		runTests := func(chClient *credhub.Client) func() {
+		runTests := func(chClient *Client) func() {
 			return func() {
 				when("Testing Find By Path", func() {
 					it("should be able to find creds by path", findByGoodPath(chClient))
@@ -499,7 +500,7 @@ func TestCredhubClient(t *testing.T) {
 						params["length"] = 30
 						cred, err := chClient.Generate("/example-generated", "password", params)
 						Expect(err).To(Not(HaveOccurred()))
-						Expect(cred.Type).To(Equal(credhub.Password))
+						Expect(cred.Type).To(Equal(Password))
 						Expect(cred.Value).To(BeAssignableToTypeOf("expected"))
 						Expect(cred.Value).To(HaveLen(30))
 					})
@@ -509,7 +510,7 @@ func TestCredhubClient(t *testing.T) {
 					it("should regenerate a password credential", func() {
 						cred, err := chClient.Regenerate("/example-password")
 						Expect(err).To(Not(HaveOccurred()))
-						Expect(cred.Type).To(Equal(credhub.Password))
+						Expect(cred.Type).To(Equal(Password))
 						Expect(cred.Value).To(BeAssignableToTypeOf("expected"))
 						Expect(cred.Value).To(BeEquivalentTo("P$<MNBVCXZ;lkjhgfdsa0987654321"))
 					})

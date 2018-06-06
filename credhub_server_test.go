@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jghiloni/credhub-api"
+	. "github.com/jghiloni/credhub-api"
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-type credentialFile map[string][]credhub.Credential
+type credentialFile map[string][]Credential
 
 // MockCredhubServer will create a mock server that is useful for unit testing
 func mockCredhubServer() *httptest.Server {
@@ -50,7 +50,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	ret := make(map[string]interface{})
 	key := "data"
 
-	var creds []credhub.Credential
+	var creds []Credential
 	var err error
 	switch r.URL.Path {
 	case "/some-url":
@@ -143,11 +143,11 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	case "/api/v1/data":
 		var generateBody struct {
 			Name   string                 `json:"name"`
-			Type   credhub.CredentialType `json:"type"`
+			Type   CredentialType         `json:"type"`
 			Params map[string]interface{} `json:"parameters"`
 		}
 
-		var cred credhub.Credential
+		var cred Credential
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &cred); err != nil {
 			w.WriteHeader(400)
@@ -180,7 +180,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 			Name string `json:"name"`
 		}
 
-		var cred credhub.Credential
+		var cred Credential
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &body); err != nil {
 			w.WriteHeader(400)
@@ -188,7 +188,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		cred.Name = body.Name
-		cred.Type = credhub.Password
+		cred.Type = Password
 		cred.Value = "P$<MNBVCXZ;lkjhgfdsa0987654321"
 		cred.Created = time.Now().Format(time.RFC3339)
 		buf, e := json.Marshal(cred)
@@ -199,8 +199,8 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(buf)
 	case "/api/v1/permissions":
 		type permbody struct {
-			Name        string               `json:"credential_name"`
-			Permissions []credhub.Permission `json:"permissions"`
+			Name        string       `json:"credential_name"`
+			Permissions []Permission `json:"permissions"`
 		}
 
 		var body permbody
@@ -255,11 +255,11 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 func putHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/api/v1/data":
-		var cred credhub.Credential
+		var cred Credential
 		var req struct {
-			credhub.Credential
-			Mode                  credhub.OverwriteMode `json:"mode"`
-			AdditionalPermissions []credhub.Permission  `json:"additonal_permissions,omitempty"`
+			Credential
+			Mode                  OverwriteMode `json:"mode"`
+			AdditionalPermissions []Permission  `json:"additional_permissions,omitempty"`
 		}
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &req); err != nil {
@@ -271,21 +271,21 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 		cred.Value = req.Value
 
 		switch req.Mode {
-		case credhub.Overwrite:
+		case Overwrite:
 			guid, err := uuid.NewV4()
 			if err != nil {
 				w.WriteHeader(500)
 			}
 			cred.ID = guid.String()
-		case credhub.NoOverwrite:
+		case NoOverwrite:
 			cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-			cred.Value = credhub.UserValueType{
+			cred.Value = UserValueType{
 				Username:     "me",
 				Password:     "old",
 				PasswordHash: "old-hash",
 			}
-		case credhub.Converge:
-			v, err := credhub.UserValue(cred)
+		case Converge:
+			v, err := UserValue(cred)
 			if err != nil {
 				w.WriteHeader(400)
 				return
@@ -355,8 +355,8 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			retBody := struct {
-				Name        string               `json:"credential_name"`
-				Permissions []credhub.Permission `json:"permissions"`
+				Name        string       `json:"credential_name"`
+				Permissions []Permission `json:"permissions"`
 			}{}
 
 			if err = json.Unmarshal(buf, &retBody); err != nil {
@@ -364,7 +364,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			newPerms := make([]credhub.Permission, 0, len(retBody.Permissions))
+			newPerms := make([]Permission, 0, len(retBody.Permissions))
 			for i := range retBody.Permissions {
 				if strings.TrimSpace(retBody.Permissions[i].Actor) != strings.TrimSpace(actor) {
 					newPerms = append(newPerms, retBody.Permissions[i])
@@ -413,7 +413,7 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(out)
 }
 
-func returnPermissionsFromFile(credentialName string) ([]credhub.Permission, error) {
+func returnPermissionsFromFile(credentialName string) ([]Permission, error) {
 	filePath := path.Join("testdata/permissions", credentialName+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -421,8 +421,8 @@ func returnPermissionsFromFile(credentialName string) ([]credhub.Permission, err
 	}
 
 	retBody := struct {
-		CN          string               `json:"credential_name"`
-		Permissions []credhub.Permission `json:"permissions"`
+		CN          string       `json:"credential_name"`
+		Permissions []Permission `json:"permissions"`
 	}{}
 
 	if err = json.Unmarshal(buf, &retBody); err != nil {
@@ -432,14 +432,14 @@ func returnPermissionsFromFile(credentialName string) ([]credhub.Permission, err
 	return retBody.Permissions, nil
 }
 
-func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]credhub.Credential, error) {
+func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]Credential, error) {
 	filePath := path.Join("testdata/credentials", query, value+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var creds []credhub.Credential
+	var creds []Credential
 
 	params := r.URL.Query()
 	name := params.Get("name")
