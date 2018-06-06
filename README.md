@@ -1,4 +1,4 @@
-# `go-credhub` [![GoDoc](https://godoc.org/github.com/cloudfoundry-community/go-credhub?status.svg)](http://godoc.org/github.com/cloudfoundry-community/go-credhub) [![Report card](https://goreportcard.com/badge/github.com/cloudfoundry-community/go-credhub)](https://goreportcard.com/report/github.com/cloudfoundry-community/go-credhub)
+# `go-credhub` [![Build Status](https://travis-ci.org/cloudfoundry-community/go-credhub.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/go-credhub)  [![GoDoc](https://godoc.org/github.com/cloudfoundry-community/go-credhub?status.svg)](http://godoc.org/github.com/cloudfoundry-community/go-credhub) [![Report card](https://goreportcard.com/badge/github.com/cloudfoundry-community/go-credhub)](https://goreportcard.com/report/github.com/cloudfoundry-community/go-credhub)
 
 ### Overview
 
