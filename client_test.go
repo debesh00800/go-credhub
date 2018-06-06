@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"net/http"
 	"os"
 	"testing"
 
 	credhub "github.com/jghiloni/credhub-api"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/matchers"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
 
@@ -373,6 +375,46 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
+		interpolate := func(chClient *credhub.Client) func() {
+			return func() {
+				vcapServices := `
+				{
+					"p-config-server": [
+					{
+						"credentials": {
+							"credhub-ref": "/service-cred-ref"
+						},
+						"label": "p-config-server",
+						"name": "config-server",
+						"plan": "standard",
+						"provider": null,
+						"syslog_drain_url": null,
+						"tags": [
+						"configuration",
+						"spring-cloud"
+						],
+						"volume_mounts": []
+					}
+					]
+				}
+				`
+
+				cred, err := chClient.GetLatestByName("/service-cred-ref")
+				Expect(err).NotTo(HaveOccurred())
+
+				interpolated, err := chClient.InterpolateCredentials(vcapServices)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vcapServicesDeepEnoughEquals(vcapServices, interpolated)).To(BeTrue())
+
+				interpolatedObj := make(map[string][]map[string]interface{})
+				err = json.Unmarshal([]byte(interpolated), &interpolatedObj)
+				Expect(err).NotTo(HaveOccurred())
+
+				resolvedCred := interpolatedObj["p-config-server"][0]["credentials"]
+				Expect(resolvedCred).To(BeEquivalentTo(cred.Value))
+			}
+		}
+
 		runTests := func(chClient *credhub.Client) func() {
 			return func() {
 				when("Testing Find By Path", func() {
@@ -468,6 +510,10 @@ func TestCredhubClient(t *testing.T) {
 
 					it("should allow permissions to be added and deleted", modifyPermissions(chClient))
 				})
+
+				when("Testing interpolation", func() {
+					it("should have values from credhub in VCAP_SERVICES", interpolate(chClient))
+				})
 			}
 		}
 
@@ -476,4 +522,46 @@ func TestCredhubClient(t *testing.T) {
 			when("not skipping TLS validation", runTests(getClient("user", "pass", false)))
 		})
 	}, spec.Report(report.Terminal{}))
+}
+
+func vcapServicesDeepEnoughEquals(a, b string) bool {
+	var err error
+
+	actual := new(map[string][]map[string]interface{})
+	expected := new(map[string][]map[string]interface{})
+
+	if err = json.Unmarshal([]byte(a), actual); err != nil {
+		return false
+	}
+
+	if err = json.Unmarshal([]byte(b), expected); err != nil {
+		return false
+	}
+
+	if err = normalizeCredentials(actual); err != nil {
+		return false
+	}
+
+	if err = normalizeCredentials(expected); err != nil {
+		return false
+	}
+
+	matcher := &BeEquivalentToMatcher{
+		Expected: *expected,
+	}
+
+	equal, err := matcher.Match(*actual)
+	return equal && err == nil
+}
+
+func normalizeCredentials(vcap *map[string][]map[string]interface{}) error {
+	for serviceType := range *vcap {
+		for i := range (*vcap)[serviceType] {
+			if _, ok := (*vcap)[serviceType][i]["credentials"]; ok {
+				(*vcap)[serviceType][i]["credentials"] = "TEST-NORMALIZATION"
+			}
+		}
+	}
+
+	return nil
 }
