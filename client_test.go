@@ -218,6 +218,35 @@ func TestCredhubClient(t *testing.T) {
 			}
 		}
 
+		badConversionValueTests := func(chClient *credhub.Client) func() {
+			return func() {
+				var (
+					cred credhub.Credential
+					err  error
+				)
+
+				cred, err = chClient.GetLatestByName("/concourse/common/sample-rsa")
+				Expect(err).NotTo(HaveOccurred())
+				_, err = credhub.SSHValue(cred)
+				Expect(err).To(HaveOccurred())
+
+				cred, err = chClient.GetLatestByName("/concourse/common/sample-ssh")
+				Expect(err).NotTo(HaveOccurred())
+				_, err = credhub.UserValue(cred)
+				Expect(err).To(HaveOccurred())
+
+				cred, err = chClient.GetLatestByName("/concourse/common/sample-user")
+				Expect(err).NotTo(HaveOccurred())
+				_, err = credhub.CertificateValue(cred)
+				Expect(err).To(HaveOccurred())
+
+				cred, err = chClient.GetLatestByName("/concourse/common/sample-certificate")
+				Expect(err).NotTo(HaveOccurred())
+				_, err = credhub.RSAValue(cred)
+				Expect(err).To(HaveOccurred())
+			}
+		}
+
 		listAllByPath := func(chClient *credhub.Client) func() {
 			return func() {
 				paths, err := chClient.ListAllPaths()
@@ -500,6 +529,10 @@ func TestCredhubClient(t *testing.T) {
 				when("Testing Delete", func() {
 					it("should delete a credential that it can find", deleteFoundCredential(chClient))
 					it("should fail to delete a credential that it cannot find", deleteNotFoundCredential(chClient))
+				})
+
+				when("Testing Bad Value Conversions", func() {
+					it("should fail every time", badConversionValueTests(chClient))
 				})
 
 				when("Testing Get Permissions", func() {
