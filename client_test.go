@@ -231,6 +231,10 @@ func TestCredhubClient(t *testing.T) {
 				cred, err := chClient.GetByID("1234")
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(cred.Name).To(BeEquivalentTo("/by-id"))
+
+				badcred, err := chClient.GetByID("4567")
+				Expect(err).To(HaveOccurred())
+				Expect(badcred.Value).To(BeNil())
 			}
 		}
 
