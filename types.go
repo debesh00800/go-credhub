@@ -37,6 +37,26 @@ const (
 	Converge OverwriteMode = "converge"
 )
 
+// Operation is the list of valid operations
+type Operation string
+
+const (
+	// Read operation allows the actor to fetch and view credentials
+	Read Operation = "read"
+
+	// Write operation allows the actor to create, update, and generate credentials
+	Write Operation = "write"
+
+	// Delete operation allows the actor to delete credentials
+	Delete Operation = "delete"
+
+	// ReadACL operation allows the actor to view all permissions on a given credential
+	ReadACL Operation = "read_acl"
+
+	// WriteACL operation allows the actor to create and delete permissions on a given credential
+	WriteACL Operation = "write_acl"
+)
+
 // Credential is the base type that the credential-based methods of Client will
 // return.
 type Credential struct {
@@ -51,8 +71,8 @@ type Credential struct {
 // Permission represents the operations an actor is allowed to perform on a
 // credential
 type Permission struct {
-	Actor      string   `json:"actor"`
-	Operations []string `json:"operations"`
+	Actor      string      `json:"actor"`
+	Operations []Operation `json:"operations"`
 }
 
 // UserValueType is what a `user` type credential will have. Use UserValue() to

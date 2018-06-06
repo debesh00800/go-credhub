@@ -356,7 +356,7 @@ func TestCredhubClient(t *testing.T) {
 
 				perms = append(perms, credhub.Permission{
 					Actor:      "uaa-user:1234",
-					Operations: []string{"read", "write", "delete"},
+					Operations: []credhub.Operation{"read", "write", "delete"},
 				})
 
 				respPerms, err := chClient.AddPermissions("/add-permission-credential", perms)

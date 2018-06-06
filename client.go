@@ -19,8 +19,6 @@ type Client struct {
 	hc  *http.Client
 }
 
-var errNotImpl = errors.New("unimplemented")
-
 // New creates a new Credhub client. You must bring an *http.Client that will
 // negotiate authentication and authorization for you. See the examples for more
 // information.
@@ -88,7 +86,7 @@ func (c *Client) GetAllByName(name string) ([]Credential, error) {
 	return c.getByName(name, false, -1)
 }
 
-// GetVersionsByName will return the latest `numVersions` versions of a given
+// GetVersionsByName will return the latest numVersions versions of a given
 // credential, still sorted in descending order by their created date.
 func (c *Client) GetVersionsByName(name string, numVersions int) ([]Credential, error) {
 	return c.getByName(name, false, numVersions)
@@ -105,7 +103,7 @@ func (c *Client) GetLatestByName(name string) (Credential, error) {
 	return creds[0], nil
 }
 
-// Set add a credential in Credhub.
+// Set adds a credential in Credhub.
 func (c *Client) Set(credential Credential, mode OverwriteMode, additonalPermissions []Permission) (Credential, error) {
 	reqBody := struct {
 		Credential
@@ -266,7 +264,9 @@ func (c *Client) FindByPartialName(partialName string) ([]Credential, error) {
 	return retBody.Credentials, err
 }
 
-// GetPermissions returns the permissions of a credential.
+// GetPermissions returns the permissions of a credential. Permissions consist of
+// an actor (See https://github.com/cloudfoundry-incubator/credhub/blob/master/docs/authentication-identities.md
+// for more information on actor identities) and Operations
 func (c *Client) GetPermissions(credentialName string) ([]Permission, error) {
 	params := make(url.Values)
 	params.Add("credential_name", credentialName)
@@ -291,7 +291,7 @@ func (c *Client) GetPermissions(credentialName string) ([]Permission, error) {
 	return retBody.Permissions, err
 }
 
-// AddPermissions adds permissions to a credential
+// AddPermissions adds permissions to a credential. Note that this method is *not* idempotent.
 func (c *Client) AddPermissions(credentialName string, newPerms []Permission) ([]Permission, error) {
 	type permbody struct {
 		Name        string       `json:"credential_name"`
@@ -333,7 +333,8 @@ func (c *Client) AddPermissions(credentialName string, newPerms []Permission) ([
 	return response.Permissions, nil
 }
 
-// DeletePermissions deletes permissions from a credential
+// DeletePermissions deletes permissions from a credential. Note that this method
+// is *not* idempotent
 func (c *Client) DeletePermissions(credentialName, actorID string) error {
 	chURL := c.url + "/api/v1/permissions"
 
@@ -359,9 +360,9 @@ func (c *Client) DeletePermissions(credentialName, actorID string) error {
 	return nil
 }
 
-// InterpolateCredentials will take a string representation of a `VCAP_SERVICES`
-// json variable, and interpolate any services whose `credentials` block consists
-// only of `credhub-ref`. It will return the interpolated JSON as a string
+// InterpolateCredentials will take a string representation of a VCAP_SERVICES
+// json variable, and interpolate any services whose credentials block consists
+// only of credhub-ref. It will return the interpolated JSON as a string
 func (c *Client) InterpolateCredentials(vcapServices string) (string, error) {
 	var err error
 
