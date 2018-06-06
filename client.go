@@ -104,15 +104,15 @@ func (c *Client) GetLatestByName(name string) (Credential, error) {
 }
 
 // Set adds a credential in Credhub.
-func (c *Client) Set(credential Credential, mode OverwriteMode, additonalPermissions []Permission) (Credential, error) {
+func (c *Client) Set(credential Credential, mode OverwriteMode, additionalPermissions []Permission) (Credential, error) {
 	reqBody := struct {
 		Credential
 		Mode                  OverwriteMode `json:"mode"`
-		AdditionalPermissions []Permission  `json:"additonal_permissions,omitempty"`
+		AdditionalPermissions []Permission  `json:"additional_permissions,omitempty"`
 	}{
 		Credential: credential,
 		Mode:       mode,
-		AdditionalPermissions: additonalPermissions,
+		AdditionalPermissions: additionalPermissions,
 	}
 	buf, err := json.Marshal(reqBody)
 	if err != nil {
