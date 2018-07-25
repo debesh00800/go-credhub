@@ -2,10 +2,7 @@ package credhub_test
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"net/http"
 	"os"
 	"testing"
 
@@ -34,23 +31,7 @@ func TestCredhubClient(t *testing.T) {
 
 		getClient := func(ci, cs string, skip bool) *Client {
 			endpoint, _ := UAAEndpoint(server.URL, true)
-			var t *http.Transport
-			if skip {
-				t = &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}
-			} else {
-				certs, _ := x509.SystemCertPool()
-				certs.AddCert(server.Certificate())
-				t = &http.Transport{
-					TLSClientConfig: &tls.Config{RootCAs: certs},
-				}
-			}
-
-			t.Proxy = http.ProxyFromEnvironment
-			sslcli := &http.Client{Transport: t}
-
-			ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
+			ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, server.Client())
 			cfg := &clientcredentials.Config{
 				ClientID:     ci,
 				ClientSecret: cs,

@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/cloudfoundry-community/go-credhub"
+	credhub "github.com/cloudfoundry-community/go-credhub"
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-type credentialFile map[string][]Credential
+type credentialFile map[string][]credhub.Credential
 
 // MockCredhubServer will create a mock server that is useful for unit testing
 func mockCredhubServer() *httptest.Server {
@@ -29,7 +29,7 @@ func mockCredhubServer() *httptest.Server {
 
 		authHeader := r.Header.Get("Authorization")
 		if strings.ToLower(authHeader) != "bearer abcd" {
-			w.WriteHeader(401)
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
@@ -50,7 +50,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	ret := make(map[string]interface{})
 	key := "data"
 
-	var creds []Credential
+	var creds []credhub.Credential
 	var err error
 	switch r.URL.Path {
 	case "/some-url":
@@ -69,7 +69,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		case name != "":
 			creds, err = returnCredentialsFromFile("byname", name, key, w, r)
 			if os.IsNotExist(err) {
-				w.WriteHeader(404)
+				w.WriteHeader(http.StatusNotFound)
 				return
 			}
 		case paths == "true":
@@ -91,7 +91,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 				creds = append(creds[:i], creds[i+1:]...)
 			}
 		default:
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	case "/api/v1/permissions":
@@ -104,7 +104,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
@@ -117,12 +117,12 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		directWriteFile("testdata/credentials/byid/1234.json", w, r)
 		return
 	default:
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -130,7 +130,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 
 	buf, err := json.Marshal(ret)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -143,26 +143,26 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	case "/api/v1/data":
 		var generateBody struct {
 			Name   string                 `json:"name"`
-			Type   CredentialType         `json:"type"`
+			Type   credhub.CredentialType `json:"type"`
 			Params map[string]interface{} `json:"parameters"`
 		}
 
-		var cred Credential
+		var cred credhub.Credential
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &cred); err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 		}
 
 		if cred.Value == nil {
 			if err := json.Unmarshal(buf, &generateBody); err != nil {
-				w.WriteHeader(400)
+				w.WriteHeader(http.StatusBadRequest)
 				return
 			} else if generateBody.Params != nil {
 				cred.Name = generateBody.Name
 				cred.Type = generateBody.Type
 				cred.Value = "1234567890asdfghjkl;ZXCVBNM<$P"
 			} else {
-				w.WriteHeader(400)
+				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
@@ -170,7 +170,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		cred.Created = t.Format(time.RFC3339)
 		buf, e := json.Marshal(cred)
 		if e != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -180,44 +180,44 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 			Name string `json:"name"`
 		}
 
-		var cred Credential
+		var cred credhub.Credential
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &body); err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		cred.Name = body.Name
-		cred.Type = Password
+		cred.Type = credhub.Password
 		cred.Value = "P$<MNBVCXZ;lkjhgfdsa0987654321"
 		cred.Created = time.Now().Format(time.RFC3339)
 		buf, e := json.Marshal(cred)
 		if e != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 
 		w.Write(buf)
 	case "/api/v1/permissions":
 		type permbody struct {
-			Name        string       `json:"credential_name"`
-			Permissions []Permission `json:"permissions"`
+			Name        string               `json:"credential_name"`
+			Permissions []credhub.Permission `json:"permissions"`
 		}
 
 		var body permbody
 
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &body); err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if body.Name == "/add-permission-credential" {
 			fp, err := os.OpenFile("testdata/permissions/add-permissions/cred.json", os.O_RDWR, 0644)
 			if os.IsNotExist(err) {
-				w.WriteHeader(404)
+				w.WriteHeader(http.StatusNotFound)
 				return
 			} else if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			defer fp.Close()
@@ -225,20 +225,20 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 			var buf []byte
 			buf, err = ioutil.ReadAll(fp)
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
 			var existing permbody
 			if err = json.Unmarshal(buf, &existing); err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
 			existing.Permissions = append(existing.Permissions, body.Permissions...)
 			outbuf, err := json.Marshal(existing)
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
@@ -246,7 +246,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(outbuf)
 			return
 		} else {
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 	}
@@ -255,15 +255,15 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 func putHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/api/v1/data":
-		var cred Credential
+		var cred credhub.Credential
 		var req struct {
-			Credential
-			Mode                  OverwriteMode `json:"mode"`
-			AdditionalPermissions []Permission  `json:"additional_permissions,omitempty"`
+			credhub.Credential
+			Mode                  credhub.OverwriteMode `json:"mode"`
+			AdditionalPermissions []credhub.Permission  `json:"additional_permissions,omitempty"`
 		}
 		buf, _ := ioutil.ReadAll(r.Body)
 		if err := json.Unmarshal(buf, &req); err != nil {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 		}
 
 		cred.Name = req.Name
@@ -271,23 +271,23 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 		cred.Value = req.Value
 
 		switch req.Mode {
-		case Overwrite:
+		case credhub.Overwrite:
 			guid, err := uuid.NewV4()
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 			}
 			cred.ID = guid.String()
-		case NoOverwrite:
+		case credhub.NoOverwrite:
 			cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-			cred.Value = UserValueType{
+			cred.Value = credhub.UserValueType{
 				Username:     "me",
 				Password:     "old",
 				PasswordHash: "old-hash",
 			}
-		case Converge:
-			v, err := UserValue(cred)
+		case credhub.Converge:
+			v, err := credhub.UserValue(cred)
 			if err != nil {
-				w.WriteHeader(400)
+				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 
@@ -296,7 +296,7 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				guid, err := uuid.NewV4()
 				if err != nil {
-					w.WriteHeader(500)
+					w.WriteHeader(http.StatusInternalServerError)
 				}
 				cred.ID = guid.String()
 			}
@@ -306,7 +306,7 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 		cred.Created = t.Format(time.RFC3339)
 		buf, e := json.Marshal(cred)
 		if e != nil {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 
 		w.Write(buf)
@@ -318,7 +318,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	case "/api/v1/data":
 		name := r.URL.Query().Get("name")
 		if name == "/some-cred" {
-			w.WriteHeader(204)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 	case "/api/v1/permissions":
@@ -334,37 +334,37 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
 			fp, err := os.OpenFile("testdata/permissions/add-permissions/cred.json", os.O_RDWR, 0644)
 			if os.IsNotExist(err) {
-				w.WriteHeader(404)
+				w.WriteHeader(http.StatusNotFound)
 				return
 			} else if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			defer fp.Close()
 
 			buf, err := ioutil.ReadAll(fp)
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
 			retBody := struct {
-				Name        string       `json:"credential_name"`
-				Permissions []Permission `json:"permissions"`
+				Name        string               `json:"credential_name"`
+				Permissions []credhub.Permission `json:"permissions"`
 			}{}
 
 			if err = json.Unmarshal(buf, &retBody); err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
-			newPerms := make([]Permission, 0, len(retBody.Permissions))
+			newPerms := make([]credhub.Permission, 0, len(retBody.Permissions))
 			for i := range retBody.Permissions {
 				if strings.TrimSpace(retBody.Permissions[i].Actor) != strings.TrimSpace(actor) {
 					newPerms = append(newPerms, retBody.Permissions[i])
@@ -375,7 +375,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 
 			output, err := json.Marshal(retBody)
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
@@ -383,15 +383,15 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 			fp.Truncate(int64(len(output)))
 			fp.WriteAt(output, 0)
 
-			w.WriteHeader(204)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		} else {
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 	}
 
-	w.WriteHeader(404)
+	w.WriteHeader(http.StatusNotFound)
 	return
 }
 
@@ -406,14 +406,14 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 	var out []byte
 	var err error
 	if out, err = json.Marshal(body); err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Write(out)
 }
 
-func returnPermissionsFromFile(credentialName string) ([]Permission, error) {
+func returnPermissionsFromFile(credentialName string) ([]credhub.Permission, error) {
 	filePath := path.Join("testdata/permissions", credentialName+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -421,8 +421,8 @@ func returnPermissionsFromFile(credentialName string) ([]Permission, error) {
 	}
 
 	retBody := struct {
-		CN          string       `json:"credential_name"`
-		Permissions []Permission `json:"permissions"`
+		CN          string               `json:"credential_name"`
+		Permissions []credhub.Permission `json:"permissions"`
 	}{}
 
 	if err = json.Unmarshal(buf, &retBody); err != nil {
@@ -432,14 +432,14 @@ func returnPermissionsFromFile(credentialName string) ([]Permission, error) {
 	return retBody.Permissions, nil
 }
 
-func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]Credential, error) {
+func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, r *http.Request) ([]credhub.Credential, error) {
 	filePath := path.Join("testdata/credentials", query, value+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var creds []Credential
+	var creds []credhub.Credential
 
 	params := r.URL.Query()
 	name := params.Get("name")
@@ -482,10 +482,10 @@ func returnCredentialsFromFile(query, value, key string, w http.ResponseWriter, 
 func directWriteFile(path string, w http.ResponseWriter, r *http.Request) {
 	buf, err := ioutil.ReadFile(path)
 	if os.IsNotExist(err) {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -498,18 +498,12 @@ func copyFile(src, dst string) error {
 	if in, err = os.Open(src); err != nil {
 		return err
 	}
-	// defer in.Close()
-	defer func() {
-		in.Close()
-	}()
+	defer in.Close()
 
 	if out, err = os.Create(dst); err != nil {
 		return err
 	}
-	//defer out.Close()
-	defer func() {
-		out.Close()
-	}()
+	defer out.Close()
 
 	if _, err := io.Copy(out, in); err != nil {
 		return err
