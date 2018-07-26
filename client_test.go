@@ -55,28 +55,28 @@ func testInvalidValueTypeConversion(t *testing.T, when spec.G, it spec.S) {
 	when("converting to the wrong value types", func() {
 		it("fails", func() {
 			var (
-				cred credhub.Credential
+				cred *credhub.Credential
 				err  error
 			)
 
 			cred, err = chClient.GetLatestByName("/concourse/common/sample-rsa")
 			Expect(err).NotTo(HaveOccurred())
-			_, err = credhub.SSHValue(cred)
+			_, err = credhub.SSHValue(*cred)
 			Expect(err).To(HaveOccurred())
 
 			cred, err = chClient.GetLatestByName("/concourse/common/sample-ssh")
 			Expect(err).NotTo(HaveOccurred())
-			_, err = credhub.UserValue(cred)
+			_, err = credhub.UserValue(*cred)
 			Expect(err).To(HaveOccurred())
 
 			cred, err = chClient.GetLatestByName("/concourse/common/sample-user")
 			Expect(err).NotTo(HaveOccurred())
-			_, err = credhub.CertificateValue(cred)
+			_, err = credhub.CertificateValue(*cred)
 			Expect(err).To(HaveOccurred())
 
 			cred, err = chClient.GetLatestByName("/concourse/common/sample-certificate")
 			Expect(err).NotTo(HaveOccurred())
-			_, err = credhub.RSAValue(cred)
+			_, err = credhub.RSAValue(*cred)
 			Expect(err).To(HaveOccurred())
 		})
 	})

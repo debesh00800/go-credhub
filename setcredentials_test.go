@@ -62,7 +62,7 @@ func testSetCredentials(t *testing.T, when spec.G, it spec.S) {
 			newCred, err := chClient.Set(cred, credhub.NoOverwrite, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(newCred.Created).To(Not(BeEmpty()))
-			v, err := credhub.UserValue(newCred)
+			v, err := credhub.UserValue(*newCred)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(v.Password).To(BeEquivalentTo("old"))
 			Expect(newCred.ID).To(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8"))

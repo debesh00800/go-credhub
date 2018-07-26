@@ -196,7 +196,7 @@ func testGetCredentials(t *testing.T, when spec.G, it spec.S) {
 
 			badcred, err := chClient.GetByID("4567")
 			Expect(err).To(HaveOccurred())
-			Expect(badcred.Value).To(BeNil())
+			Expect(badcred).To(BeNil())
 		})
 	})
 

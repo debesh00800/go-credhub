@@ -11,22 +11,21 @@ import (
 
 // GetByID will look up a credental by its ID. Since each version of a named
 // credential has a different ID, this will always return at most one value.
-func (c *Client) GetByID(id string) (Credential, error) {
-	var cred Credential
-
+func (c *Client) GetByID(id string) (*Credential, error) {
 	resp, err := c.hc.Get(c.url + "/api/v1/data/" + id)
 	if err != nil {
-		return cred, err
+		return nil, err
 	}
 
 	if resp.StatusCode == 404 {
-		return cred, errors.New("credential not found")
+		return nil, errors.New("credential not found")
 	}
 
 	marshaller := json.NewDecoder(resp.Body)
 
-	if err = marshaller.Decode(&cred); err != nil {
-		return cred, err
+	cred := new(Credential)
+	if err = marshaller.Decode(cred); err != nil {
+		return nil, err
 	}
 
 	return cred, nil
@@ -46,13 +45,13 @@ func (c *Client) GetVersionsByName(name string, numVersions int) ([]Credential, 
 
 // GetLatestByName will return the current version of a credential. It will return
 // at most one item.
-func (c *Client) GetLatestByName(name string) (Credential, error) {
+func (c *Client) GetLatestByName(name string) (*Credential, error) {
 	creds, err := c.getByName(name, true, -1)
 	if err != nil {
-		return Credential{}, err
+		return nil, err
 	}
 
-	return creds[0], nil
+	return &creds[0], nil
 }
 
 func (c *Client) getByName(name string, latest bool, numVersions int) ([]Credential, error) {
