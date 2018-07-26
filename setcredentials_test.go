@@ -1,6 +1,7 @@
 package credhub_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -98,6 +99,26 @@ func testSetCredentials(t *testing.T, when spec.G, it spec.S) {
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(newCred.Created).To(Not(BeEmpty()))
 			Expect(newCred.ID).To(Not(BeEquivalentTo("6ba7b810-9dad-11d1-80b4-00c04fd430c8")))
+		})
+	})
+
+	when("testing edge cases", func() {
+		when("an error occurs creating the HTTP request", func() {
+			it("fails", func() {
+				chClient = credhub.New("badscheme://bad_hsot\\", http.DefaultClient)
+				cred, err := chClient.Set(credhub.Credential{}, credhub.Overwrite, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(cred).To(BeNil())
+			})
+		})
+
+		when("an error occurs on the http round trip", func() {
+			it("fails", func() {
+				chClient = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+				cred, err := chClient.Set(credhub.Credential{}, credhub.Overwrite, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(cred).To(BeNil())
+			})
 		})
 	})
 }

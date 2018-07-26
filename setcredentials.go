@@ -17,13 +17,13 @@ func (c *Client) Set(credential Credential, mode OverwriteMode, additionalPermis
 		Mode:       mode,
 		AdditionalPermissions: additionalPermissions,
 	}
-	buf, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
+
+	// an error can't occur since everything being marshalled is valid according to
+	// the encoding/json spec
+	buf, _ := json.Marshal(reqBody)
 
 	var req *http.Request
-	req, err = http.NewRequest("PUT", c.url+"/api/v1/data", bytes.NewBuffer(buf))
+	req, err := http.NewRequest("PUT", c.url+"/api/v1/data", bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, err
 	}

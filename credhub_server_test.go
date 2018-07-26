@@ -55,6 +55,8 @@ func mockCredhubServer() *httptest.Server {
 	router.Handle("/api/v1/data", authHandler(deleteCredentials)).Methods(http.MethodDelete)
 	router.Handle("/api/v1/permissions", authHandler(deletePermissions)).Methods(http.MethodDelete)
 
+	router.PathPrefix("/badjson").Handler(authHandler(badJSON))
+
 	return httptest.NewTLSServer(router)
 }
 
@@ -419,6 +421,11 @@ func deletePermissions(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+}
+
+func badJSON(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{invalid}`))
 }
 
 func returnPermissionsFromFile(credentialName string) ([]credhub.Permission, error) {

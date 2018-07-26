@@ -1,99 +1,70 @@
 package credhub_test
 
 import (
-	"context"
-	"crypto/tls"
-	"crypto/x509"
+	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"net/http"
-	"net/url"
 
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
 
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
-
-	. "github.com/cloudfoundry-community/go-credhub"
+	"github.com/cloudfoundry-community/go-credhub"
 	. "github.com/onsi/gomega"
 )
 
-func TestOAuthClient(t *testing.T) {
-	spec.Run(t, "OAuth2 Client", func(t *testing.T, when spec.G, it spec.S) {
-		cs := mockCredhubServer()
+func TestUAAEndpoint(t *testing.T) {
+	spec.Run(t, "UAAEndpoint", testUAAEndpoint, spec.Report(report.Terminal{}))
+}
 
-		serverCert := cs.Certificate()
+func testUAAEndpoint(t *testing.T, when spec.G, it spec.S) {
+	var (
+		server *httptest.Server
+	)
 
-		getClient := func(cu, ci, cs string, skip bool) (*http.Client, error) {
-			endpoint, err := UAAEndpoint(cu, true)
-			if err != nil {
-				return nil, err
-			}
+	it.Before(func() {
+		RegisterTestingT(t)
+		server = mockCredhubServer()
+	})
 
-			//var sslcli *http.Client
-			var tr *http.Transport
-			if skip {
-				tr = &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}
-			} else {
-				certs, _ := x509.SystemCertPool()
-				certs.AddCert(serverCert)
-				tr = &http.Transport{
-					TLSClientConfig: &tls.Config{RootCAs: certs},
-				}
-			}
-			sslcli := &http.Client{Transport: tr}
+	it.After(func() {
+		server.Close()
+	})
 
-			ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
-			cfg := &clientcredentials.Config{
-				ClientID:     ci,
-				ClientSecret: cs,
-				TokenURL:     endpoint.TokenURL,
-				Scopes:       []string{"read", "write"},
-			}
+	when("Getting the UAA endpoint", func() {
+		it("works", func() {
+			endpoint, err := credhub.UAAEndpoint(server.URL, true)
+			Expect(err).NotTo(HaveOccurred())
 
-			return cfg.Client(ctx), nil
-		}
+			authURL := endpoint.AuthURL
+			tokenURL := endpoint.TokenURL
 
-		it.Before(func() {
-			RegisterTestingT(t)
+			Expect(authURL).NotTo(BeZero())
+			Expect(tokenURL).NotTo(BeZero())
+
+			idx := strings.Index(authURL, "/oauth")
+			Expect(idx).To(BeNumerically(">", 0))
+			baseAuthURL := authURL[:idx]
+
+			Expect(baseAuthURL).NotTo(Equal(server.URL))
+
+			baseTokenURL := tokenURL[:idx]
+			Expect(baseAuthURL).To(Equal(baseTokenURL))
 		})
+	})
 
-		goodAuthTests := func(client *http.Client, err error) {
-			it("should work if credentials are correct", func() {
-				Expect(client).To(Not(BeNil()))
-				Expect(err).To(Not(HaveOccurred()))
-				r, err2 := client.Get(cs.URL + "/some-url")
-				Expect(r).To(Not(BeNil()))
-				Expect(r.StatusCode).To(Equal(200))
-				Expect(err2).To(BeNil())
-			})
-		}
-
-		badAuthTests := func(client *http.Client, err error) {
-			it("should not work if credentials are incorrect", func() {
-				Expect(client).To(Not(BeNil()))
-				Expect(err).To(Not(HaveOccurred()))
-				r, err2 := client.Get(cs.URL + "/some-url")
-				Expect(r).To(BeNil())
-				urlerr, ok := err2.(*url.Error)
-				Expect(ok).To(BeTrue())
-				Expect(urlerr).To(Not(BeNil()))
-				Expect(strings.HasSuffix(urlerr.Error(), "401 Unauthorized"))
-			})
-		}
-
-		when("testing with skipping SSL validation", func() {
-			goodAuthTests(getClient(cs.URL, "user", "pass", true))
-			badAuthTests(getClient(cs.URL, "baduser", "badpass", true))
+	when("the server url is invalid", func() {
+		it("fails", func() {
+			endpoint, err := credhub.UAAEndpoint("badscheme://bad_host\\", false)
+			Expect(err).To(HaveOccurred())
+			Expect(endpoint).To(BeZero())
 		})
+	})
 
-		when("testing without skipping SSL validation", func() {
-			goodAuthTests(getClient(cs.URL, "user", "pass", false))
-			badAuthTests(getClient(cs.URL, "baduser", "badpass", false))
+	when("the server returns invalid json", func() {
+		it("fails", func() {
+			endpoint, err := credhub.UAAEndpoint(server.URL+"/badjson", true)
+			Expect(err).To(HaveOccurred())
+			Expect(endpoint).To(BeZero())
 		})
-	}, spec.Report(report.Terminal{}))
+	})
 }

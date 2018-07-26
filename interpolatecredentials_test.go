@@ -71,4 +71,35 @@ func testInterpolateCredentials(t *testing.T, when spec.G, it spec.S) {
 			Expect(resolvedCred).To(BeEquivalentTo(cred.Value))
 		})
 	})
+
+	when("testing edge cases", func() {
+		when("getting invalid VCAP_SERVICES json", func() {
+			it("fails", func() {
+				vcapServices := `{invalid}`
+				interpolated, err := chClient.InterpolateCredentials(vcapServices)
+				Expect(err).To(HaveOccurred())
+				Expect(interpolated).To(BeZero())
+			})
+		})
+
+		when("the credential ref does not exist", func() {
+			it("fails", func() {
+				vcapServices := `
+	      {
+	        "p-config-server": [
+	        {
+	          "credentials": {
+	            "credhub-ref": "/this-does-not-exist"
+	          }
+	        }
+	        ]
+	      }
+	      `
+
+				interpolated, err := chClient.InterpolateCredentials(vcapServices)
+				Expect(err).To(HaveOccurred())
+				Expect(interpolated).To(BeZero())
+			})
+		})
+	})
 }

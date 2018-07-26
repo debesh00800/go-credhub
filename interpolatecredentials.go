@@ -35,10 +35,8 @@ func (c *Client) InterpolateCredentials(vcapServices string) (string, error) {
 		}
 	}
 
-	output, err := json.Marshal(services)
-	if err != nil {
-		return "", err
-	}
-
+	// can't really encounter an error here, since everything has come from
+	// previously unmarshalled json, so it should marshal just fine
+	output, _ := json.Marshal(services)
 	return string(output), nil
 }

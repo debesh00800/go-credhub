@@ -2,6 +2,7 @@ package credhub_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,6 +22,13 @@ type authRoundTripper struct {
 func (a *authRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Add("authorization", "bearer abcd")
 	return a.orig.RoundTrip(r)
+}
+
+type errorRoundTripper struct {
+}
+
+func (e *errorRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	return nil, errors.New("test-error")
 }
 
 func getAuthenticatedClient(hc *http.Client) *http.Client {
@@ -52,7 +60,7 @@ func testInvalidValueTypeConversion(t *testing.T, when spec.G, it spec.S) {
 		server.Close()
 	})
 
-	when("converting to the wrong value types", func() {
+	when("converting fetched credentials to the wrong value types", func() {
 		it("fails", func() {
 			var (
 				cred *credhub.Credential
@@ -78,6 +86,121 @@ func testInvalidValueTypeConversion(t *testing.T, when spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			_, err = credhub.RSAValue(*cred)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	when("getting the value from an invalid credential", func() {
+		var cred credhub.Credential
+
+		it.Before(func() {
+			cred = credhub.Credential{
+				Name:    "/test",
+				ID:      "1234",
+				Created: "today",
+				Value: map[float32]float32{
+					8.67: 53.09,
+				},
+			}
+		})
+
+		when("converting to user type", func() {
+			it("fails", func() {
+				cred.Type = credhub.User
+				v, err := credhub.UserValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
+		})
+
+		when("converting to rsa type", func() {
+			it("fails", func() {
+				cred.Type = credhub.RSA
+				v, err := credhub.RSAValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
+		})
+
+		when("converting to ssh type", func() {
+			it("fails", func() {
+				cred.Type = credhub.SSH
+				v, err := credhub.SSHValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
+		})
+
+		when("converting to certificate type", func() {
+			it("fails", func() {
+				cred.Type = credhub.Certificate
+				v, err := credhub.CertificateValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
+		})
+	})
+
+	when("getting the value from a cred whose type and value don't match", func() {
+		var cred credhub.Credential
+
+		it.Before(func() {
+			cred = credhub.Credential{
+				Name:    "/test",
+				ID:      "1234",
+				Created: "today",
+			}
+		})
+
+		when("converting to user type", func() {
+			it("fails", func() {
+				cred.Type = credhub.User
+				cred.Value = map[string]interface{}{
+					"username": "foo",
+					"extra":    "bad",
+				}
+				v, err := credhub.UserValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
+		})
+
+		when("converting to rsa type", func() {
+			it("fails", func() {
+				cred.Type = credhub.RSA
+				cred.Value = map[string]interface{}{
+					"public_key": "foo",
+					"extra":      "bad",
+				}
+				v, err := credhub.RSAValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
+		})
+
+		when("converting to ssh type", func() {
+			it("fails", func() {
+				cred.Type = credhub.SSH
+				cred.Value = map[string]interface{}{
+					"public_key": "foo",
+					"extra":      "bad",
+				}
+				v, err := credhub.SSHValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
+		})
+
+		when("converting to certificate type", func() {
+			it("fails", func() {
+				cred.Type = credhub.Certificate
+				cred.Value = map[string]interface{}{
+					"certificate": "foo",
+					"extra":       "bad",
+				}
+				v, err := credhub.CertificateValue(cred)
+				Expect(err).To(HaveOccurred())
+				Expect(v).To(BeZero())
+			})
 		})
 	})
 }

@@ -20,13 +20,10 @@ func (c *Client) AddPermissions(credentialName string, newPerms []Permission) ([
 		Permissions: newPerms,
 	}
 
-	body, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
+	// request fully conforms to the go json spec, so an error can't occur
+	body, _ := json.Marshal(request)
 
-	var req *http.Request
-	req, err = http.NewRequest("POST", c.url+"/api/v1/permissions", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", c.url+"/api/v1/permissions", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}

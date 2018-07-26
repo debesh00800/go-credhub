@@ -18,7 +18,7 @@ func (c *Client) Delete(name string) error {
 		return err
 	}
 
-	if resp.StatusCode != 204 {
+	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("expected return code 204, got %d", resp.StatusCode)
 	}
 

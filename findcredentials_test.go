@@ -1,6 +1,7 @@
 package credhub_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -61,6 +62,49 @@ func testFindCredentials(t *testing.T, when spec.G, it spec.S) {
 			for _, cred := range creds {
 				Expect(cred.Name).To(ContainSubstring("password"))
 			}
+		})
+	})
+
+	when("invalid json is returned", func() {
+		it("fails", func() {
+			cli := credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+			p, err := cli.ListAllPaths()
+			Expect(err).To(HaveOccurred())
+			Expect(p).To(BeNil())
+		})
+	})
+
+	when("an http error occurs", func() {
+		var cli *credhub.Client
+		it.Before(func() {
+			cli = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+		})
+
+		when("listing all paths", func() {
+			it("fails", func() {
+				p, err := cli.ListAllPaths()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("test-error"))
+				Expect(p).To(BeNil())
+			})
+		})
+
+		when("finding by path", func() {
+			it("fails", func() {
+				p, err := cli.FindByPath("/test")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("test-error"))
+				Expect(p).To(BeNil())
+			})
+		})
+
+		when("finding by partial name", func() {
+			it("fails", func() {
+				p, err := cli.FindByPartialName("test")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("test-error"))
+				Expect(p).To(BeNil())
+			})
 		})
 	})
 }

@@ -1,6 +1,7 @@
 package credhub_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -200,4 +201,57 @@ func testGetCredentials(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 
+	when("testing edge cases", func() {
+		when("an error happens during the http round trip", func() {
+			it.Before(func() {
+				chClient = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			})
+
+			when("getting a credential by id", func() {
+				it("fails", func() {
+					cred, err := chClient.GetByID("1234")
+					Expect(err).To(HaveOccurred())
+					Expect(cred).To(BeNil())
+				})
+			})
+
+			when("getting all versions of a credential by name", func() {
+				it("fails", func() {
+					cred, err := chClient.GetAllByName("test")
+					Expect(err).To(HaveOccurred())
+					Expect(cred).To(BeNil())
+				})
+			})
+
+			when("getting the latest version of a credential by name", func() {
+				it("fails", func() {
+					cred, err := chClient.GetLatestByName("test")
+					Expect(err).To(HaveOccurred())
+					Expect(cred).To(BeNil())
+				})
+			})
+		})
+
+		when("bad json is returned", func() {
+			it.Before(func() {
+				chClient = credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+			})
+
+			when("getting a credential by id", func() {
+				it("fails", func() {
+					cred, err := chClient.GetByID("1234")
+					Expect(err).To(HaveOccurred())
+					Expect(cred).To(BeNil())
+				})
+			})
+
+			when("getting all versions of a credential by name", func() {
+				it("fails", func() {
+					cred, err := chClient.GetAllByName("test")
+					Expect(err).To(HaveOccurred())
+					Expect(cred).To(BeNil())
+				})
+			})
+		})
+	})
 }

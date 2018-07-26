@@ -1,6 +1,7 @@
 package credhub_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -29,6 +30,23 @@ func testDeleteCredentials(t *testing.T, when spec.G, it spec.S) {
 
 	it.After(func() {
 		server.Close()
+	})
+
+	when("the client's base url is invalid", func() {
+		it("fails", func() {
+			cli := credhub.New("badscheme://bad_host\\", http.DefaultClient)
+			err := cli.Delete("foobar")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	when("making the request results in an error", func() {
+		it("propogates the error", func() {
+			cli := credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			err := cli.Delete("foobar")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("test-error"))
+		})
 	})
 
 	when("testing delete credentials", func() {

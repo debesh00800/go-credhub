@@ -52,13 +52,11 @@ func (c *Client) Regenerate(name string) (*Credential, error) {
 		Name: name,
 	}
 
-	buf, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
+	// there's no way that this will ever return an error, so ignore the error
+	buf, _ := json.Marshal(reqBody)
 
 	var req *http.Request
-	req, err = http.NewRequest("POST", c.url+"/api/v1/data/regenerate", bytes.NewBuffer(buf))
+	req, err := http.NewRequest("POST", c.url+"/api/v1/data/regenerate", bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, err
 	}

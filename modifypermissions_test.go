@@ -1,6 +1,7 @@
 package credhub_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -28,12 +29,14 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	it.After(func() {
-		err := os.Remove("testdata/permissions/add-permissions/cred.json")
-		Expect(err).NotTo(HaveOccurred())
 		server.Close()
 	})
 
 	when("Modifying Permissions", func() {
+		it.After(func() {
+			err := os.Remove("testdata/permissions/add-permissions/cred.json")
+			Expect(err).NotTo(HaveOccurred())
+		})
 		it("Works", func() {
 			var perms []credhub.Permission
 			var err error
@@ -64,6 +67,71 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 			perms, err = chClient.GetPermissions("/add-permission-credential")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(perms).To(HaveLen(0))
+		})
+	})
+
+	when("testing edge cases", func() {
+		when("the server URL is invalid", func() {
+			it.Before(func() {
+				chClient = credhub.New("badscheme://bad_host\\", http.DefaultClient)
+			})
+
+			when("adding permissions", func() {
+				it("fails", func() {
+					p, err := chClient.AddPermissions("/test", nil)
+					Expect(err).To(HaveOccurred())
+					Expect(p).To(BeNil())
+				})
+			})
+
+			when("deleting permissions", func() {
+				it("fails", func() {
+					err := chClient.DeletePermissions("/test", "me")
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+
+		when("an error occurs in the http roundtrip", func() {
+			it.Before(func() {
+				chClient = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			})
+
+			when("adding permissions", func() {
+				it("fails", func() {
+					p, err := chClient.AddPermissions("/test", nil)
+					Expect(err).To(HaveOccurred())
+					Expect(p).To(BeNil())
+				})
+			})
+
+			when("deleting permissions", func() {
+				it("fails", func() {
+					err := chClient.DeletePermissions("/test", "me")
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+
+		when("invalid json is returned", func() {
+			it.Before(func() {
+				chClient = credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+			})
+
+			when("adding permissions", func() {
+				it("fails", func() {
+					p, err := chClient.AddPermissions("/test", nil)
+					Expect(err).To(HaveOccurred())
+					Expect(p).To(BeNil())
+				})
+			})
+
+			when("deleting permissions", func() {
+				it("fails", func() {
+					err := chClient.DeletePermissions("/test", "me")
+					Expect(err).To(HaveOccurred())
+				})
+			})
 		})
 	})
 }
