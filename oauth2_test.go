@@ -33,19 +33,19 @@ func TestOAuthClient(t *testing.T) {
 			}
 
 			//var sslcli *http.Client
-			var t *http.Transport
+			var tr *http.Transport
 			if skip {
-				t = &http.Transport{
+				tr = &http.Transport{
 					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 				}
 			} else {
 				certs, _ := x509.SystemCertPool()
 				certs.AddCert(serverCert)
-				t = &http.Transport{
+				tr = &http.Transport{
 					TLSClientConfig: &tls.Config{RootCAs: certs},
 				}
 			}
-			sslcli := &http.Client{Transport: t}
+			sslcli := &http.Client{Transport: tr}
 
 			ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, sslcli)
 			cfg := &clientcredentials.Config{

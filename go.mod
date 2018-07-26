@@ -1,7 +1,7 @@
 module github.com/cloudfoundry-community/go-credhub
 
 require (
-	github.com/gorilla/mux v1.6.2 // indirect
+	github.com/gorilla/mux v1.6.2
 	github.com/hpcloud/tail v1.0.0 // indirect
 	github.com/nsf/gocode v0.0.0-20180502111240-9d1e0378d35b // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
