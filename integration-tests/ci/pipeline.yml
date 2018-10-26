@@ -38,7 +38,6 @@ resources:
 
 - name: bbl-cli
   type: github-release
-  check_every: 24h
   source:
     owner: cloudfoundry
     repository: bosh-bootloader
@@ -46,7 +45,6 @@ resources:
 
 - name: bosh-cli
   type: github-release
-  check_every: 24h
   source:
     owner: cloudfoundry
     repository: bosh-cli
@@ -56,6 +54,22 @@ jobs:
 - name: create-test-env
   plan:
   - aggregate:
+    - get: source
+      trigger: true
+    - get: credhub-bosh-release
+      trigger: true
+      params: {tarball: false}
+    - get: uaa-bosh-release
+      trigger: true
+      params: {tarball: false}
+  - put: bbl-state
+    params:
+      command: up
+      # name: ((bbl_gcp.name))
+
+- name: deploy-credhub
+  plan:
+  - aggregate:
     - get: task-image
     - get: bbl-cli
       params:
@@ -63,16 +77,20 @@ jobs:
     - get: bosh-cli
       params:
         globs: ['bosh*linux*']
+    - get: bbl-state
+      trigger: true
+      passed: [create-test-env]
     - get: source
       trigger: true
+      passed: [create-test-env]
     - get: credhub-bosh-release
       trigger: true
+      passed: [create-test-env]
+      params: {tarball: false}
     - get: uaa-bosh-release
       trigger: true
-    - put: bbl-state
-      params:
-        command: up
-        name: ((bbl_gcp.name))
+      passed: [create-test-env]
+      params: {tarball: false}
   - task: deploy-credhub
     image: task-image
     file: source/integration-tests/ci/tasks/deploy-credhub.yml
@@ -83,14 +101,18 @@ jobs:
     # - get: task-image
     - get: source
       trigger: true
-      passed: [create-test-env]
+      passed: [deploy-credhub]
     - get: bbl-state
+      trigger: true
+      passed: [deploy-credhub]
 
-- name: clean-up
+- name: delete-credhub
   plan:
   - aggregate:
     - get: task-image
     - get: bbl-state
+      trigger: true
+      passed: [run-integration-tests]
     - get: source
       trigger: true
       passed: [run-integration-tests]
@@ -98,12 +120,23 @@ jobs:
     image: task-image
     file: source/integration-tests/ci/tasks/delete-credhub.yml
 
-- name: delete-env
+- name: destroy-test-env
   plan:
+  - get: existing-bbl-env
+    resource: bbl-state
   - get: source
     trigger: true
-    passed: [clean-up]
+    passed: [delete-credhub]
   - put: bbl-state
     params:
       command: destroy
-      name: ((bbl_gcp.name))
+      state_dir: existing-bbl-env
+
+- name: manual-destroy-test-env
+  plan:
+  - get: existing-bbl-env
+    resource: bbl-state
+  - put: bbl-state
+    params:
+      command: destroy
+      state_dir: existing-bbl-env
