@@ -9,12 +9,18 @@ resources:
 - name: source
   type: git
   source:
-    <<: ((source-repo))
+    uri: ((source-repo.uri))
+    private_key: ((source-repo.private_key))
 
-- name: credhub-bosh-release
-  type: bosh-io-release
-  source:
-    repository: pivotal-cf/credhub-release
+# - name: credhub-bosh-release
+#   type: bosh-io-release
+#   source:
+#     repository: pivotal-cf/credhub-release
+
+# - name: uaa-bosh-release
+#   type: bosh-io-release
+#   source:
+#     repository: cloudfoundry/uaa-release
 
 - name: bbl-state
   type: bbl-state-resource
@@ -30,10 +36,10 @@ jobs:
   - aggregate:
     - get: source
       trigger: true
-    - get: credhub-bosh-release
-      trigger: true
-    - get: uaa-bosh-release
-      trigger: true
+    # - get: credhub-bosh-release
+    #   trigger: true
+    # - get: uaa-bosh-release
+    #   trigger: true
     - put: bbl-state
       params:
         command: up
@@ -48,5 +54,26 @@ jobs:
       trigger: true
       passed: [create-test-env]
         
-
+- name: clean-up
+  plan:
+  - aggregate:
+    - get: source
+    - get: bbl-state
+      trigger: true
+      passed: [run-integration-tests]
+  - task: delete-credhub
+    file: source/ci/tasks/delete-credhub.yml
+  - put: bbl-state
+    params:
+      command: destroy
   
+- name: manual-clean-up
+  plan:
+  - aggregate:
+    - get: source
+    - get: bbl-state
+  - task: delete-credhub
+    file: source/ci/tasks/delete-credhub.yml
+  - put: bbl-state
+    params:
+      command: destroy
