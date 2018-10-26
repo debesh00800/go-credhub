@@ -28,6 +28,21 @@ resources:
   source:
     repository: cloudfoundry/uaa-release
 
+- name: postgres-bosh-release
+  type: bosh-io-release
+  source:
+    repository: cloudfoundry/postgres-release
+
+- name: os-conf-bosh-release
+  type: bosh-io-release
+  source:
+    repository: cloudfoundry/os-conf-release
+
+- name: trusty-stemcell
+  type: bosh-io-stemcell
+  source:
+    name: bosh-google-kvm-ubuntu-trusty-go_agent
+
 - name: bbl-state
   type: bbl-state-resource
   source:
@@ -62,10 +77,16 @@ jobs:
     - get: uaa-bosh-release
       trigger: true
       params: {tarball: false}
+  - put: bbl-plan
+    resource: bbl-state
+    params:
+      command: plan
+  - task: create-overrides
+    file: source/integration-tests/ci/tasks/create-overrides.yml
   - put: bbl-state
     params:
       command: up
-      # name: ((bbl_gcp.name))
+      state_dir: overridden-bbl-plan
 
 - name: deploy-credhub
   plan:
@@ -90,6 +111,12 @@ jobs:
     - get: uaa-bosh-release
       trigger: true
       passed: [create-test-env]
+      params: {tarball: false}
+    - get: os-conf-bosh-release
+      params: {tarball: false}
+    - get: postgres-bosh-release
+      params: {tarball: false}
+    - get: trusty-stemcell
       params: {tarball: false}
   - task: deploy-credhub
     image: task-image
