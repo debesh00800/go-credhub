@@ -12,15 +12,21 @@ resources:
     uri: ((source-repo.uri))
     private_key: ((source-repo.private_key))
 
-# - name: credhub-bosh-release
-#   type: bosh-io-release
-#   source:
-#     repository: pivotal-cf/credhub-release
+- name: task-image
+  type: docker-image
+  source:
+    repository: cloudfoundry/cflinuxfs3
+    tag: latest
 
-# - name: uaa-bosh-release
-#   type: bosh-io-release
-#   source:
-#     repository: cloudfoundry/uaa-release
+- name: credhub-bosh-release
+  type: bosh-io-release
+  source:
+    repository: pivotal-cf/credhub-release
+
+- name: uaa-bosh-release
+  type: bosh-io-release
+  source:
+    repository: cloudfoundry/uaa-release
 
 - name: bbl-state
   type: bbl-state-resource
@@ -30,50 +36,74 @@ resources:
     gcp_region: ((bbl_gcp.region))
     gcp_service_account_key: ((bbl_gcp.service_account_key))
 
+- name: bbl-cli
+  type: github-release
+  check_every: 24h
+  source:
+    owner: cloudfoundry
+    repository: bosh-bootloader
+    access_token: ((git-access-token))
+
+- name: bosh-cli
+  type: github-release
+  check_every: 24h
+  source:
+    owner: cloudfoundry
+    repository: bosh-cli
+    access_token: ((git-access-token))
+
 jobs:
 - name: create-test-env
   plan:
   - aggregate:
+    - get: task-image
+    - get: bbl-cli
+      params:
+        globs: ['bbl*linux*']
+    - get: bosh-cli
+      params:
+        globs: ['bosh*linux*']
     - get: source
       trigger: true
-    # - get: credhub-bosh-release
-    #   trigger: true
-    # - get: uaa-bosh-release
-    #   trigger: true
+    - get: credhub-bosh-release
+      trigger: true
+    - get: uaa-bosh-release
+      trigger: true
     - put: bbl-state
       params:
         command: up
+        name: ((bbl_gcp.name))
   - task: deploy-credhub
-    file: source/ci/tasks/deploy-credhub.yml
+    image: task-image
+    file: source/integration-tests/ci/tasks/deploy-credhub.yml
 
 - name: run-integration-tests
   plan:
   - aggregate:
+    # - get: task-image
     - get: source
-    - get: bbl-state
       trigger: true
       passed: [create-test-env]
-        
+    - get: bbl-state
+
 - name: clean-up
   plan:
   - aggregate:
-    - get: source
+    - get: task-image
     - get: bbl-state
+    - get: source
       trigger: true
       passed: [run-integration-tests]
   - task: delete-credhub
-    file: source/ci/tasks/delete-credhub.yml
-  - put: bbl-state
-    params:
-      command: destroy
-  
-- name: manual-clean-up
+    image: task-image
+    file: source/integration-tests/ci/tasks/delete-credhub.yml
+
+- name: delete-env
   plan:
-  - aggregate:
-    - get: source
-    - get: bbl-state
-  - task: delete-credhub
-    file: source/ci/tasks/delete-credhub.yml
+  - get: source
+    trigger: true
+    passed: [clean-up]
   - put: bbl-state
     params:
       command: destroy
+      name: ((bbl_gcp.name))
