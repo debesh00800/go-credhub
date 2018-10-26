@@ -1,0 +1,52 @@
+---
+resource_types:
+- name: bbl-state-resource
+  type: docker-image
+  source:
+    repository: cfinfrastructure/bbl-state-resource
+
+resources:
+- name: source
+  type: git
+  source:
+    <<: ((source-repo))
+
+- name: credhub-bosh-release
+  type: bosh-io-release
+  source:
+    repository: pivotal-cf/credhub-release
+
+- name: bbl-state
+  type: bbl-state-resource
+  source:
+    iaas: gcp
+    bucket: ((bbl_gcp.bucket))
+    gcp_region: ((bbl_gcp.region))
+    gcp_service_account_key: ((bbl_gcp.service_account_key))
+
+jobs:
+- name: create-test-env
+  plan:
+  - aggregate:
+    - get: source
+      trigger: true
+    - get: credhub-bosh-release
+      trigger: true
+    - get: uaa-bosh-release
+      trigger: true
+    - put: bbl-state
+      params:
+        command: up
+  - task: deploy-credhub
+    file: source/ci/tasks/deploy-credhub.yml
+
+- name: run-integration-tests
+  plan:
+  - aggregate:
+    - get: source
+    - get: bbl-state
+      trigger: true
+      passed: [create-test-env]
+        
+
+  
