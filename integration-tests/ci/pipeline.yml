@@ -133,6 +133,8 @@ jobs:
   - task: deploy-credhub
     image: task-image
     file: source/integration-tests/ci/tasks/deploy-credhub.yml
+    input_mapping:
+      bbl-state: state
   on_failure: *cleanup_plan
 
 - name: run-integration-tests
@@ -169,8 +171,10 @@ jobs:
   - task: delete-credhub
     image: task-image
     file: source/integration-tests/ci/tasks/delete-credhub.yml
+    input_mapping:
+      bbl-state: state
   ensure: *cleanup_plan
   
 - name: manual-destroy-test-env
-  plan: 
-  - do: *cleanup_plan
+  plan: []
+  ensure: *cleanup_plan
