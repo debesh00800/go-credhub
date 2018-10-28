@@ -1,6 +1,0 @@
----
-- type: replace
-  path: /networks/-
-  value:
-    name: public
-    type: vip

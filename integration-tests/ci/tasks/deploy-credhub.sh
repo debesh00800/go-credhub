@@ -24,7 +24,7 @@ done
 internal_ip=10.0.16.190
 external_ip=$(bosh int vars/director-vars-file.yml --path /go-credhub-external-ip)
 
-bosh -n update-cloud-config ${BASEDIR}/source/integration-tests/manifest/cc-opsfile.yml --name vip-network
+bosh -n update-config ${BASEDIR}/source/integration-tests/manifest/vip-cloud-config.yml --type=cloud --name=vip-network
 bosh -n -d credhub deploy ${BASEDIR}/source/integration-tests/manifest/credhub.yml \
     -o ${BASEDIR}/source/integration-tests/manifest/opsfile.yml \
     -v external-ip-address="${external_ip}" \
