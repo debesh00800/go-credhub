@@ -13,3 +13,4 @@ cd bbl-state
 
 eval "$(bbl print-env)"
 
+bosh -n -d credhub delete-deployment

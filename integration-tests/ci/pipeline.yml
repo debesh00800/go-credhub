@@ -1,4 +1,13 @@
 ---
+cleanup: &cleanup_plan
+  do:
+  - get: existing-bbl-env
+    resource: bbl-state
+  - put: bbl-state
+    params:
+      command: destroy
+      state_dir: existing-bbl-env
+
 resource_types:
 - name: bbl-state-resource
   type: docker-image
@@ -100,7 +109,8 @@ jobs:
     - get: bosh-cli
       params:
         globs: ['bosh*linux*']
-    - get: bbl-state
+    - get: state
+      resource: bbl-state
       trigger: true
       passed: [create-test-env]
     - get: source
@@ -123,6 +133,7 @@ jobs:
   - task: deploy-credhub
     image: task-image
     file: source/integration-tests/ci/tasks/deploy-credhub.yml
+  on_failure: *cleanup_plan
 
 - name: run-integration-tests
   plan:
@@ -131,15 +142,25 @@ jobs:
     - get: source
       trigger: true
       passed: [deploy-credhub]
-    - get: bbl-state
+    - get: state
+      resource: bbl-state   
       trigger: true
       passed: [deploy-credhub]
+  on_failure: *cleanup_plan
+
 
 - name: delete-credhub
   plan:
   - aggregate:
     - get: task-image
-    - get: bbl-state
+    - get: bbl-cli
+      params:
+        globs: ['bbl*linux*']
+    - get: bosh-cli
+      params:
+        globs: ['bosh*linux*']
+    - get: state
+      resource: bbl-state
       trigger: true
       passed: [run-integration-tests]
     - get: source
@@ -148,24 +169,8 @@ jobs:
   - task: delete-credhub
     image: task-image
     file: source/integration-tests/ci/tasks/delete-credhub.yml
-
-- name: destroy-test-env
-  plan:
-  - get: existing-bbl-env
-    resource: bbl-state
-  - get: source
-    trigger: true
-    passed: [delete-credhub]
-  - put: bbl-state
-    params:
-      command: destroy
-      state_dir: existing-bbl-env
-
+  ensure: *cleanup_plan
+  
 - name: manual-destroy-test-env
-  plan:
-  - get: existing-bbl-env
-    resource: bbl-state
-  - put: bbl-state
-    params:
-      command: destroy
-      state_dir: existing-bbl-env
+  plan: 
+  - do: *cleanup_plan
