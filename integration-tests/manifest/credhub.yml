@@ -15,7 +15,6 @@ releases:
   version: latest
 - name: uaa
   version: latest
-- name: backup-and-restore-sdk
   version: latest
 - name: os-conf
   version: latest
