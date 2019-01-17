@@ -1,8 +1,8 @@
 package credhub_test
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	uaa "code.cloudfoundry.org/uaa-go-client"
 	"code.cloudfoundry.org/uaa-go-client/config"
-	"github.com/tyrannosaurus-becks/go-credhub"
+	credhub "github.com/cloudfoundry-community/go-credhub"
 )
 
 func TestUAAAuthedClient_Get(t *testing.T) {

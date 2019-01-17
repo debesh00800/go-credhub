@@ -8,7 +8,7 @@ import (
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
 
-	"github.com/cloudfoundry-community/go-credhub"
+	credhub "github.com/cloudfoundry-community/go-credhub"
 	. "github.com/onsi/gomega"
 )
 
