@@ -16,4 +16,4 @@ script:
 - env GO111MODULE=on go tool vet $FILES
 - env GO111MODULE=on goimports -d $FILES
 - env GO111MODULE=on go test -v -race -covermode=atomic -coverprofile=coverage.out -cover ./...
-- env GO111MODULE=on $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+- if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then env GO111MODULE=on $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN; fi
