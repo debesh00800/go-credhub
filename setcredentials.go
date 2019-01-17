@@ -13,8 +13,8 @@ func (c *Client) Set(credential Credential, mode OverwriteMode, additionalPermis
 		Mode                  OverwriteMode `json:"mode"`
 		AdditionalPermissions []Permission  `json:"additional_permissions,omitempty"`
 	}{
-		Credential: credential,
-		Mode:       mode,
+		Credential:            credential,
+		Mode:                  mode,
 		AdditionalPermissions: additionalPermissions,
 	}
 

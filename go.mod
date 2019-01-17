@@ -13,7 +13,6 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.1
-	github.com/pkg/errors v0.8.1
 	github.com/sclevine/spec v1.0.0
 	github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc // indirect
 	golang.org/x/oauth2 v0.0.0-20180724155351-3d292e4d0cdc
@@ -22,4 +21,5 @@ require (
 	google.golang.org/appengine v1.4.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
