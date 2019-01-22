@@ -74,7 +74,7 @@ func (c *CFAppAuthClient) loadTLS(tr *http.Transport) error {
 }
 
 func copyTransport(tr *http.Transport) *http.Transport {
-	return &http.Transport{
+	copy := &http.Transport{
 		Dial:                   tr.Dial,
 		DialContext:            tr.DialContext,
 		DialTLS:                tr.DialTLS,
@@ -82,7 +82,6 @@ func copyTransport(tr *http.Transport) *http.Transport {
 		DisableKeepAlives:      tr.DisableKeepAlives,
 		ExpectContinueTimeout:  tr.ExpectContinueTimeout,
 		IdleConnTimeout:        tr.IdleConnTimeout,
-		MaxConnsPerHost:        tr.MaxConnsPerHost,
 		MaxIdleConns:           tr.MaxIdleConns,
 		MaxIdleConnsPerHost:    tr.MaxIdleConnsPerHost,
 		MaxResponseHeaderBytes: tr.MaxResponseHeaderBytes,
@@ -93,4 +92,7 @@ func copyTransport(tr *http.Transport) *http.Transport {
 		TLSHandshakeTimeout:    tr.TLSHandshakeTimeout,
 		TLSNextProto:           tr.TLSNextProto,
 	}
+
+	copyExtraTransportFields(tr, copy)
+	return copy
 }
