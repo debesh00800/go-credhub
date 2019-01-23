@@ -20,12 +20,14 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 	var (
 		server   *httptest.Server
 		chClient *credhub.Client
+		err      error
 	)
 
 	it.Before(func() {
 		RegisterTestingT(t)
 		server = mockCredhubServer()
-		chClient = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		chClient, err = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	it.After(func() {
@@ -73,28 +75,16 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 	when("testing edge cases", func() {
 		when("the server URL is invalid", func() {
 			it.Before(func() {
-				chClient = credhub.New("badscheme://bad_host\\", http.DefaultClient)
-			})
-
-			when("adding permissions", func() {
-				it("fails", func() {
-					p, err := chClient.AddPermissions("/test", nil)
-					Expect(err).To(HaveOccurred())
-					Expect(p).To(BeNil())
-				})
-			})
-
-			when("deleting permissions", func() {
-				it("fails", func() {
-					err := chClient.DeletePermissions("/test", "me")
-					Expect(err).To(HaveOccurred())
-				})
+				chClient, err = credhub.New("badscheme://bad_host\\", http.DefaultClient)
+				Expect(err).To(HaveOccurred())
+				Expect(chClient).To(BeNil())
 			})
 		})
 
 		when("an error occurs in the http roundtrip", func() {
 			it.Before(func() {
-				chClient = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+				chClient, err = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			when("adding permissions", func() {
@@ -115,7 +105,8 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 
 		when("invalid json is returned", func() {
 			it.Before(func() {
-				chClient = credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+				chClient, err = credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			when("adding permissions", func() {

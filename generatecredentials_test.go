@@ -23,9 +23,11 @@ func testGenerateCredentials(t *testing.T, when spec.G, it spec.S) {
 	)
 
 	it.Before(func() {
+		var err error
 		RegisterTestingT(t)
 		server = mockCredhubServer()
-		chClient = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		chClient, err = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	it.After(func() {
@@ -57,27 +59,17 @@ func testGenerateCredentials(t *testing.T, when spec.G, it spec.S) {
 	when("testing edge cases", func() {
 		when("an error occurs creating the request", func() {
 			it.Before(func() {
-				chClient = credhub.New("badscheme://bad_host\\", http.DefaultClient)
-			})
-			when("Generating credentials", func() {
-				it("fails", func() {
-					cred, err := chClient.Generate("", credhub.Value, nil)
-					Expect(err).To(HaveOccurred())
-					Expect(cred).To(BeNil())
-				})
-			})
-			when("Regenerating credentials", func() {
-				it("fails", func() {
-					cred, err := chClient.Regenerate("")
-					Expect(err).To(HaveOccurred())
-					Expect(cred).To(BeNil())
-				})
+				var err error
+				chClient, err = credhub.New("badscheme://bad_host\\", http.DefaultClient)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		when("an error occurs in the http round trip", func() {
 			it.Before(func() {
-				chClient = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+				var err error
+				chClient, err = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			when("Generating credentials", func() {

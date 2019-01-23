@@ -23,9 +23,11 @@ func testFindCredentials(t *testing.T, when spec.G, it spec.S) {
 	)
 
 	it.Before(func() {
+		var err error
 		RegisterTestingT(t)
 		server = mockCredhubServer()
-		chClient = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		chClient, err = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	it.After(func() {
@@ -67,7 +69,8 @@ func testFindCredentials(t *testing.T, when spec.G, it spec.S) {
 
 	when("invalid json is returned", func() {
 		it("fails", func() {
-			cli := credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+			cli, e := credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+			Expect(e).NotTo(HaveOccurred())
 			p, err := cli.ListAllPaths()
 			Expect(err).To(HaveOccurred())
 			Expect(p).To(BeNil())
@@ -77,7 +80,9 @@ func testFindCredentials(t *testing.T, when spec.G, it spec.S) {
 	when("an http error occurs", func() {
 		var cli *credhub.Client
 		it.Before(func() {
-			cli = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			var err error
+			cli, err = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		when("listing all paths", func() {

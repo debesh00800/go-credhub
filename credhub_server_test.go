@@ -2,6 +2,7 @@ package credhub_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -32,7 +33,7 @@ func authHandler(next func(w http.ResponseWriter, r *http.Request)) http.Handler
 	})
 }
 
-// MockCredhubServer will create a mock server that is useful for unit testing
+// mockCredhubServer will create a mock v1 server that is useful for unit testing
 func mockCredhubServer() *httptest.Server {
 	router := mux.NewRouter()
 
@@ -56,6 +57,9 @@ func mockCredhubServer() *httptest.Server {
 	router.Handle("/api/v1/permissions", authHandler(deletePermissions)).Methods(http.MethodDelete)
 
 	router.PathPrefix("/badjson").Handler(authHandler(badJSON))
+	router.Handle("/version", authHandler(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"version": "1.9.1"}`)
+	}))
 
 	return httptest.NewTLSServer(router)
 }
@@ -425,6 +429,12 @@ func deletePermissions(w http.ResponseWriter, r *http.Request) {
 
 func badJSON(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+
+	// exception here for version, we want that to return something real
+	if strings.HasSuffix(r.URL.Path, "/version") {
+		fmt.Fprint(w, `{"version": "1.9.1"}`)
+	}
+
 	w.Write([]byte(`{invalid}`))
 }
 

@@ -23,9 +23,11 @@ func testDeleteCredentials(t *testing.T, when spec.G, it spec.S) {
 	)
 
 	it.Before(func() {
+		var err error
 		RegisterTestingT(t)
 		server = mockCredhubServer()
-		chClient = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		chClient, err = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	it.After(func() {
@@ -34,16 +36,17 @@ func testDeleteCredentials(t *testing.T, when spec.G, it spec.S) {
 
 	when("the client's base url is invalid", func() {
 		it("fails", func() {
-			cli := credhub.New("badscheme://bad_host\\", http.DefaultClient)
-			err := cli.Delete("foobar")
+			cli, err := credhub.New("badscheme://bad_host\\", http.DefaultClient)
 			Expect(err).To(HaveOccurred())
+			Expect(cli).To(BeNil())
 		})
 	})
 
 	when("making the request results in an error", func() {
 		it("propogates the error", func() {
-			cli := credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
-			err := cli.Delete("foobar")
+			cli, err := credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			Expect(err).NotTo(HaveOccurred())
+			err = cli.Delete("foobar")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("test-error"))
 		})

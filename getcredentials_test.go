@@ -25,7 +25,7 @@ func testGetCredentials(t *testing.T, when spec.G, it spec.S) {
 	it.Before(func() {
 		RegisterTestingT(t)
 		server = mockCredhubServer()
-		chClient = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		chClient, _ = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
 	})
 
 	it.After(func() {
@@ -204,7 +204,7 @@ func testGetCredentials(t *testing.T, when spec.G, it spec.S) {
 	when("testing edge cases", func() {
 		when("an error happens during the http round trip", func() {
 			it.Before(func() {
-				chClient = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+				chClient, _ = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
 			})
 
 			when("getting a credential by id", func() {
@@ -234,7 +234,10 @@ func testGetCredentials(t *testing.T, when spec.G, it spec.S) {
 
 		when("bad json is returned", func() {
 			it.Before(func() {
-				chClient = credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+				var err error
+				chClient, err = credhub.New(server.URL+"/badjson", getAuthenticatedClient(server.Client()))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(chClient).NotTo(BeNil())
 			})
 
 			when("getting a credential by id", func() {
@@ -256,7 +259,7 @@ func testGetCredentials(t *testing.T, when spec.G, it spec.S) {
 
 		when("the client is unauthorized", func() {
 			it("fails but does not panic", func() {
-				cli := credhub.New(server.URL, &http.Client{Transport: &unauthorizedRoundTripper{}})
+				cli, _ := credhub.New(server.URL, &http.Client{Transport: &unauthorizedRoundTripper{}})
 				cred, err := cli.GetLatestByName("test")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("Expected HTTP 200 OK response, got 401 Unauthorized instead"))

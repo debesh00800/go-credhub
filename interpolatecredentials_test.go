@@ -23,9 +23,11 @@ func testInterpolateCredentials(t *testing.T, when spec.G, it spec.S) {
 	)
 
 	it.Before(func() {
+		var err error
 		RegisterTestingT(t)
 		server = mockCredhubServer()
-		chClient = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		chClient, err = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	it.After(func() {

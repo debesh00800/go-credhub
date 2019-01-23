@@ -19,6 +19,7 @@ func testGetPermissions(t *testing.T, when spec.G, it spec.S) {
 	var (
 		server   *httptest.Server
 		chClient *credhub.Client
+		err      error
 	)
 
 	it.Before(func() {
@@ -32,7 +33,8 @@ func testGetPermissions(t *testing.T, when spec.G, it spec.S) {
 
 	when("getting permissions", func() {
 		it.Before(func() {
-			chClient = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+			chClient, err = credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		it("works", func() {
@@ -49,7 +51,8 @@ func testGetPermissions(t *testing.T, when spec.G, it spec.S) {
 
 	when("an error occurs in the HTTP roundtrip", func() {
 		it.Before(func() {
-			chClient = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			chClient, err = credhub.New(server.URL, &http.Client{Transport: &errorRoundTripper{}})
+			Expect(err).NotTo(HaveOccurred())
 		})
 		it("fails", func() {
 			perms, err := chClient.GetPermissions("/test")
