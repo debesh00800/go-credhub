@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -75,11 +76,16 @@ func (c *Client) getByName(name string, latest bool, numVersions int) ([]Credent
 	chURL += params.Encode()
 	resp, err := c.hc.Get(chURL)
 	if err != nil {
-		return retBody.Data, err
+		return nil, err
 	}
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return nil, errors.New("Name Not Found")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Expected HTTP 200 OK response, got %d %s instead",
+			resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 
 	marshaller := json.NewDecoder(resp.Body)

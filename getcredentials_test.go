@@ -253,5 +253,15 @@ func testGetCredentials(t *testing.T, when spec.G, it spec.S) {
 				})
 			})
 		})
+
+		when("the client is unauthorized", func() {
+			it("fails but does not panic", func() {
+				cli := credhub.New(server.URL, &http.Client{Transport: &unauthorizedRoundTripper{}})
+				cred, err := cli.GetLatestByName("test")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("Expected HTTP 200 OK response, got 401 Unauthorized instead"))
+				Expect(cred).To(BeNil())
+			})
+		})
 	})
 }

@@ -24,6 +24,14 @@ func (a *authRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	return a.orig.RoundTrip(r)
 }
 
+type unauthorizedRoundTripper struct{}
+
+func (u *unauthorizedRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	resp := httptest.NewRecorder()
+	resp.WriteHeader(http.StatusUnauthorized)
+	return resp.Result(), nil
+}
+
 type errorRoundTripper struct {
 }
 
