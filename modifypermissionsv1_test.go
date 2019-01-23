@@ -36,7 +36,7 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 
 	when("Modifying Permissions", func() {
 		it.After(func() {
-			err := os.Remove("testdata/permissions/add-permissions/cred.json")
+			err := os.Remove("testdata/permissions/v1/add-permissions/cred.json")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		it("Works", func() {

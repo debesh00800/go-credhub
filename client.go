@@ -3,7 +3,9 @@ package credhub
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -13,6 +15,10 @@ type Client struct {
 	url  string
 	hc   HTTPClient
 	isV1 bool
+
+	// Log is the logger that the client will use to log warnings. It defaults to the
+	// default system logger
+	Log *log.Logger
 }
 
 // New creates a new Credhub client. You must bring an *http.Client that will
@@ -23,6 +29,8 @@ func New(credhubURL string, hc HTTPClient) (*Client, error) {
 		url: credhubURL,
 		hc:  hc,
 	}
+
+	c.Log = log.New(os.Stderr, log.Prefix(), log.Flags())
 
 	err := c.setVersion()
 	if err != nil {

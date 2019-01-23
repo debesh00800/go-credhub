@@ -1,8 +1,11 @@
 package credhub_test
 
 import (
+	"bytes"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -123,4 +126,29 @@ func testSetCredentials(t *testing.T, when spec.G, it spec.S) {
 			})
 		})
 	})
+}
+
+func TestV2SetCredentials(t *testing.T) {
+	server := mockV2CredhubServer()
+	defer server.Close()
+
+	chClient, err := credhub.New(server.URL, getAuthenticatedClient(server.Client()))
+	Expect(err).NotTo(HaveOccurred())
+	Expect(chClient).NotTo(BeNil())
+	Expect(chClient.IsV1API()).To(BeFalse())
+
+	logBuffer := bytes.NewBuffer([]byte{})
+	chClient.Log = log.New(logBuffer, "", log.Ldate)
+
+	cred, err := chClient.Set(credhub.Credential{Name: "/some-value", Type: credhub.Value, Value: "foo"}, credhub.Overwrite, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cred.Value != "foo" {
+		t.Fatalf(`Expected value to be "foo", got %q`, cred.Value)
+	}
+	logStr := logBuffer.String()
+	if !strings.Contains(logStr, "[WARNING] mode is ignored") {
+		t.Fatal("Warning was not logged!")
+	}
 }

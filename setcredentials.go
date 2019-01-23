@@ -10,12 +10,18 @@ import (
 func (c *Client) Set(credential Credential, mode OverwriteMode, additionalPermissions []Permission) (*Credential, error) {
 	reqBody := struct {
 		Credential
-		Mode                  OverwriteMode `json:"mode"`
+		Mode                  OverwriteMode `json:"mode,omitempty"`
 		AdditionalPermissions []Permission  `json:"additional_permissions,omitempty"`
 	}{
-		Credential:            credential,
-		Mode:                  mode,
-		AdditionalPermissions: additionalPermissions,
+		Credential: credential,
+	}
+
+	if c.IsV1API() {
+		reqBody.Mode = mode
+		reqBody.AdditionalPermissions = additionalPermissions
+	} else {
+		c.Log.Println("[WARNING] mode is ignored on v2 credhub servers and will be ignored")
+		c.Log.Println("[WARNING] additional_permissions can not be set directly on v2 servers, please use AddPermissions instead")
 	}
 
 	// an error can't occur since everything being marshalled is valid according to
@@ -34,6 +40,7 @@ func (c *Client) Set(credential Credential, mode OverwriteMode, additionalPermis
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	cred := new(Credential)
 	unmarshaller := json.NewDecoder(resp.Body)

@@ -60,9 +60,9 @@ const (
 // Credential is the base type that the credential-based methods of Client will
 // return.
 type Credential struct {
-	ID           string         `json:"id"`
+	ID           string         `json:"id,omitempty"`
 	Name         string         `json:"name"`
-	Created      string         `json:"version_created_at"`
+	Created      string         `json:"version_created_at,omitempty"`
 	Type         CredentialType `json:"type,omitempty"`
 	Value        interface{}    `json:"value,omitempty"`
 	remarshalled bool

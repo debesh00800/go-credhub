@@ -40,7 +40,7 @@ func mockCredhubServer() *httptest.Server {
 	router.HandleFunc("/info", infoHandler).Methods(http.MethodGet)
 	router.Handle("/api/v1/data", authHandler(getCredentials)).Methods(http.MethodGet)
 	router.Handle("/api/v1/data/1234", authHandler(getCredentialsByID)).Methods(http.MethodGet)
-	router.Handle("/api/v1/permissions", authHandler(getPermissions)).Methods(http.MethodGet)
+	router.Handle("/api/v1/permissions", authHandler(getV1Permissions)).Methods(http.MethodGet)
 	router.Handle("/some-url", authHandler(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Hello world"))
@@ -49,16 +49,46 @@ func mockCredhubServer() *httptest.Server {
 
 	router.Handle("/api/v1/data", authHandler(postCredentials)).Methods(http.MethodPost)
 	router.Handle("/api/v1/data/regenerate", authHandler(regenerateCredentials)).Methods(http.MethodPost)
-	router.Handle("/api/v1/permissions", authHandler(postPermissions)).Methods(http.MethodPost)
+	router.Handle("/api/v1/permissions", authHandler(postV1Permissions)).Methods(http.MethodPost)
 
-	router.Handle("/api/v1/data", authHandler(putCredentials)).Methods(http.MethodPut)
+	router.Handle("/api/v1/data", authHandler(putCredentials(true))).Methods(http.MethodPut)
 
 	router.Handle("/api/v1/data", authHandler(deleteCredentials)).Methods(http.MethodDelete)
-	router.Handle("/api/v1/permissions", authHandler(deletePermissions)).Methods(http.MethodDelete)
+	router.Handle("/api/v1/permissions", authHandler(deleteV1Permissions)).Methods(http.MethodDelete)
 
 	router.PathPrefix("/badjson").Handler(authHandler(badJSON))
 	router.Handle("/version", authHandler(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"version": "1.9.1"}`)
+	}))
+
+	return httptest.NewTLSServer(router)
+}
+
+func mockV2CredhubServer() *httptest.Server {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/info", infoHandler).Methods(http.MethodGet)
+	router.Handle("/api/v1/data", authHandler(getCredentials)).Methods(http.MethodGet)
+	router.Handle("/api/v1/data/1234", authHandler(getCredentialsByID)).Methods(http.MethodGet)
+	router.Handle("/api/v2/permissions", authHandler(getV1Permissions)).Methods(http.MethodGet)
+	router.Handle("/some-url", authHandler(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Hello world"))
+		return
+	})).Methods(http.MethodGet)
+
+	router.Handle("/api/v1/data", authHandler(postCredentials)).Methods(http.MethodPost)
+	router.Handle("/api/v1/data/regenerate", authHandler(regenerateCredentials)).Methods(http.MethodPost)
+	router.Handle("/api/v2/permissions", authHandler(postV1Permissions)).Methods(http.MethodPost)
+
+	router.Handle("/api/v1/data", authHandler(putCredentials(false))).Methods(http.MethodPut)
+
+	router.Handle("/api/v1/data", authHandler(deleteCredentials)).Methods(http.MethodDelete)
+	router.Handle("/api/v2/permissions", authHandler(deleteV1Permissions)).Methods(http.MethodDelete)
+
+	router.PathPrefix("/badjson").Handler(authHandler(badJSON))
+	router.Handle("/version", authHandler(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"version": "2.0.0"}`)
 	}))
 
 	return httptest.NewTLSServer(router)
@@ -151,15 +181,15 @@ func getCredentialsByID(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func getPermissions(w http.ResponseWriter, r *http.Request) {
+func getV1Permissions(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	name := r.FormValue("credential_name")
 
 	if name == "/add-permission-credential" {
-		fileName := "testdata/permissions/add-permissions/cred.json"
+		fileName := "testdata/permissions/v1/add-permissions/cred.json"
 		if _, err = os.Stat(fileName); os.IsNotExist(err) {
-			err = copyFile("testdata/permissions/add-permissions/base.json", fileName)
+			err = copyFile("testdata/permissions/v1/add-permissions/base.json", fileName)
 		}
 
 		if err != nil {
@@ -170,7 +200,7 @@ func getPermissions(w http.ResponseWriter, r *http.Request) {
 		name = "/add-permissions/cred"
 	}
 
-	directWriteFile(path.Join("testdata/permissions", name+".json"), w, r)
+	directWriteFile(path.Join("testdata/permissions/v1", name+".json"), w, r)
 	return
 }
 
@@ -235,7 +265,7 @@ func regenerateCredentials(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf)
 }
 
-func postPermissions(w http.ResponseWriter, r *http.Request) {
+func postV1Permissions(w http.ResponseWriter, r *http.Request) {
 	type permbody struct {
 		Name        string               `json:"credential_name"`
 		Permissions []credhub.Permission `json:"permissions"`
@@ -250,7 +280,7 @@ func postPermissions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if body.Name == "/add-permission-credential" {
-		fp, err := os.OpenFile("testdata/permissions/add-permissions/cred.json", os.O_RDWR, 0644)
+		fp, err := os.OpenFile("testdata/permissions/v1/add-permissions/cred.json", os.O_RDWR, 0644)
 		if os.IsNotExist(err) {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -289,62 +319,72 @@ func postPermissions(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func putCredentials(w http.ResponseWriter, r *http.Request) {
-	var cred credhub.Credential
-	var req struct {
-		credhub.Credential
-		Mode                  credhub.OverwriteMode `json:"mode"`
-		AdditionalPermissions []credhub.Permission  `json:"additional_permissions,omitempty"`
-	}
-	buf, _ := ioutil.ReadAll(r.Body)
-	if err := json.Unmarshal(buf, &req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	cred.Name = req.Name
-	cred.Type = req.Type
-	cred.Value = req.Value
-
-	switch req.Mode {
-	case credhub.Overwrite:
-		guid, err := uuid.NewV4()
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+func putCredentials(v1 bool) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var cred credhub.Credential
+		var req struct {
+			credhub.Credential
+			Mode                  credhub.OverwriteMode `json:"mode"`
+			AdditionalPermissions []credhub.Permission  `json:"additional_permissions,omitempty"`
 		}
-		cred.ID = guid.String()
-	case credhub.NoOverwrite:
-		cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-		cred.Value = credhub.UserValueType{
-			Username:     "me",
-			Password:     "old",
-			PasswordHash: "old-hash",
-		}
-	case credhub.Converge:
-		v, err := credhub.UserValue(cred)
-		if err != nil {
+		buf, _ := ioutil.ReadAll(r.Body)
+		if err := json.Unmarshal(buf, &req); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if v.Password == "super-secret" {
-			cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-		} else {
+		if !v1 {
+			if req.AdditionalPermissions != nil || req.Mode != "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		cred.Name = req.Name
+		cred.Type = req.Type
+		cred.Value = req.Value
+
+		switch req.Mode {
+		case credhub.Overwrite:
 			guid, err := uuid.NewV4()
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
 			cred.ID = guid.String()
+		case credhub.NoOverwrite:
+			cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+			cred.Value = credhub.UserValueType{
+				Username:     "me",
+				Password:     "old",
+				PasswordHash: "old-hash",
+			}
+		case credhub.Converge:
+			v, err := credhub.UserValue(cred)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			if v.Password == "super-secret" {
+				cred.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+			} else {
+				guid, err := uuid.NewV4()
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+				cred.ID = guid.String()
+			}
 		}
-	}
 
-	t := time.Now()
-	cred.Created = t.Format(time.RFC3339)
-	buf, e := json.Marshal(cred)
-	if e != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
+		t := time.Now()
+		cred.Created = t.Format(time.RFC3339)
+		buf, e := json.Marshal(cred)
+		if e != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 
-	w.Write(buf)
+		w.Write(buf)
+	}
 }
 
 func deleteCredentials(w http.ResponseWriter, r *http.Request) {
@@ -357,14 +397,14 @@ func deleteCredentials(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func deletePermissions(w http.ResponseWriter, r *http.Request) {
+func deleteV1Permissions(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	name := r.URL.Query().Get("credential_name")
 	actor := r.URL.Query().Get("actor")
 
 	if name == "/add-permission-credential" {
-		fileName := "testdata/permissions/add-permissions/cred.json"
+		fileName := "testdata/permissions/v1/add-permissions/cred.json"
 		if _, err = os.Stat(fileName); os.IsNotExist(err) {
 			err = copyFile("testdata/permissions/add-permissions/base.json", fileName)
 		}
@@ -374,7 +414,7 @@ func deletePermissions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fp, err := os.OpenFile("testdata/permissions/add-permissions/cred.json", os.O_RDWR, 0644)
+		fp, err := os.OpenFile("testdata/permissions/v1/add-permissions/cred.json", os.O_RDWR, 0644)
 		if os.IsNotExist(err) {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -439,7 +479,7 @@ func badJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func returnPermissionsFromFile(credentialName string) ([]credhub.Permission, error) {
-	filePath := path.Join("testdata/permissions", credentialName+".json")
+	filePath := path.Join("testdata/permissions/v1", credentialName+".json")
 	buf, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
