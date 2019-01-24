@@ -66,6 +66,7 @@ func (c *Client) DeletePermissions(credentialName, actorID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 204 {
 		return fmt.Errorf("expected return code 204, got %d", resp.StatusCode)

@@ -22,6 +22,7 @@ func UAAEndpoint(credhubURL string, skipTLSVerify bool) (oauth2.Endpoint, error)
 	if err != nil {
 		return endpoint, err
 	}
+	defer r.Body.Close()
 
 	var body struct {
 		AuthServer struct {

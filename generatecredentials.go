@@ -32,6 +32,7 @@ func (c *Client) Generate(name string, credentialType CredentialType, parameters
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	cred := new(Credential)
 	unmarshaller := json.NewDecoder(resp.Body)
@@ -67,6 +68,7 @@ func (c *Client) Regenerate(name string) (*Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	cred := new(Credential)
 	unmarshaller := json.NewDecoder(resp.Body)

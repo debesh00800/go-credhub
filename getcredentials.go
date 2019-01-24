@@ -17,6 +17,7 @@ func (c *Client) GetByID(id string) (*Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
 		return nil, errors.New("credential not found")
@@ -78,6 +79,7 @@ func (c *Client) getByName(name string, latest bool, numVersions int) ([]Credent
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, errors.New("Name Not Found")

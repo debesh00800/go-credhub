@@ -17,6 +17,7 @@ func (c *Client) Delete(name string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("expected return code 204, got %d", resp.StatusCode)

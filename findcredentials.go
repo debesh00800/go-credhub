@@ -18,6 +18,7 @@ func (c *Client) ListAllPaths() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	marshaller := json.NewDecoder(resp.Body)
 
@@ -44,6 +45,7 @@ func (c *Client) FindByPath(path string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	buf, _ := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(buf, &retBody)
@@ -60,6 +62,7 @@ func (c *Client) FindByPartialName(partialName string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	marshaller := json.NewDecoder(resp.Body)
 

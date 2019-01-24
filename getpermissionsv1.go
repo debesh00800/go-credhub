@@ -17,6 +17,7 @@ func (c *Client) GetPermissions(credentialName string) ([]Permission, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
 		return nil, errors.New("credential not found")
