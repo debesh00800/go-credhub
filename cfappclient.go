@@ -6,13 +6,8 @@ import (
 	"os"
 )
 
-/*
-  NewCFAppAuthClient creates a CFAppAuthClient
-
-  Example Usage:
-
-    client := NewCFAppAuthClient(http.DefaultClient())
-*/
+// NewCFAppAuthClient creates a CFAppAuthClient with client cert info injected
+// into the given transport
 func NewCFAppAuthClient(tr *http.Transport) (HTTPClient, error) {
 	client := &CFAppAuthClient{}
 

@@ -36,12 +36,11 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 
 	when("Modifying Permissions", func() {
 		it.After(func() {
-			err := os.Remove("testdata/permissions/v1/add-permissions/cred.json")
+			err = os.Remove("testdata/permissions/v1/add-permissions/cred.json")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		it("Works", func() {
 			var perms []credhub.Permission
-			var err error
 
 			perms, err = chClient.GetPermissions("/add-permission-credential")
 			Expect(err).NotTo(HaveOccurred())
@@ -89,15 +88,15 @@ func testModifyPermissions(t *testing.T, when spec.G, it spec.S) {
 
 			when("adding permissions", func() {
 				it("fails", func() {
-					p, err := chClient.AddPermissions("/test", nil)
-					Expect(err).To(HaveOccurred())
+					p, e := chClient.AddPermissions("/test", nil)
+					Expect(e).To(HaveOccurred())
 					Expect(p).To(BeNil())
 				})
 			})
 
 			when("deleting permissions", func() {
 				it("fails", func() {
-					err := chClient.DeletePermissions("/test", "me")
+					err = chClient.DeletePermissions("/test", "me")
 					Expect(err).To(HaveOccurred())
 				})
 			})
